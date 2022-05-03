@@ -4,7 +4,7 @@ import shutil
 
 images_path = os.getcwd() + "/dataset/hand_picked"
 parameters = {
-    "120": { "param2" :   7, "minRadius":   1, "maxRadius":   6 },
+    "120": { "param2" :   9, "minRadius":   1, "maxRadius":   6 },
     "121": { "param2" : 13, "minRadius":   7, "maxRadius": 23 },
     "123": { "param2" : 12, "minRadius": 13, "maxRadius": 24 },
     "130": { "param2" : 13, "minRadius":   8, "maxRadius": 24 },
@@ -20,7 +20,7 @@ for root, dir, files in os.walk(images_path):
             complete_path = root + "/" + image
             modified_image_name = image.replace("original", "modified")
             pcb_3_ch = cv2.imread(complete_path)
-            pcb_bin = cv2.bitwise_not(cv2.imread(complete_path), 0)
+            pcb_bin = cv2.bitwise_not(cv2.imread(complete_path, 0))
             # detected circles
             try:
                 detected_circles = cv2.HoughCircles(pcb_bin, cv2.HOUGH_GRADIENT, 1, 20, param1 = 50,
@@ -41,6 +41,7 @@ for root, dir, files in os.walk(images_path):
                     with open("dataset/locations.txt", "a") as f:
                         f.write(image + "," + x1 + "," + y1 + "," + x2 + "," + y2 + "\n")
                         f.write(modified_image_name + "," + x1 + "," + y1 + "," + x2 + "," + y2 + "\n")
-            except:
-                cv2.imshow("img", pcb_3_ch)
-                cv2.waitKey(0)
+            except Exception as e:
+                print(image, e)
+                # cv2.imshow("img", pcb_3_ch)
+                # cv2.waitKey(0)
