@@ -19,7 +19,9 @@ for root, dir, files in os.walk(images_path):
             image_type = image[:3]
             complete_path = root + "/" + image
             modified_image_name = image.replace("original", "modified")
+            modified_path = root + "/" + modified_image_name
             pcb_3_ch = cv2.imread(complete_path)
+            pcb_3_ch_modified = cv2.imread(modified_path)
             pcb_bin = cv2.bitwise_not(cv2.imread(complete_path, 0))
             # detected circles
             try:
@@ -35,6 +37,8 @@ for root, dir, files in os.walk(images_path):
                     # insert a smaller white circle when a black circle is detected
                     cv2.circle(pcb_3_ch, (a, b), r2, (255, 255, 255), -1)
                     cv2.imwrite(complete_path, pcb_3_ch)
+                    cv2.circle(pcb_3_ch_modified, (a, b), r2, (255, 255, 255), -1)
+                    cv2.imwrite(modified_path, pcb_3_ch_modified)
                     # writing positions to a txt file
                     x1, x2 = str(a - r), str(a + r)
                     y1, y2 = str(b + r), str(b - r)
@@ -43,5 +47,5 @@ for root, dir, files in os.walk(images_path):
                         f.write(modified_image_name + "," + x1 + "," + y1 + "," + x2 + "," + y2 + "\n")
             except Exception as e:
                 print(image, e)
-                # cv2.imshow("img", pcb_3_ch)
-                # cv2.waitKey(0)
+                os.remove(complete_path)
+                os.remove(modified_path)
