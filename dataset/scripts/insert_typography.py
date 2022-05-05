@@ -21,6 +21,7 @@ def generate_random_font_type():
 
 def cv2_ascii(font, font_size, thick, coords):
     text = generate_random_ascii()
+    font_color = (255, 255, 255)
     (text_width, text_height) = cv2.getTextSize(text, font, font_size, thick)[0]
     mask = np.zeros((text_height, text_width), dtype=np.uint8)
     mask = cv2.putText(mask, text, coords, font, font_size, font_color, thick, cv2.LINE_AA)
@@ -35,7 +36,6 @@ def pdi_pipeline(img_path):
     font_size = font_combination["size"]
     thick = font_combination["thick"]
     coords = font_combination["org"]
-    font_color = (255, 255, 255)
     # image processing
     x_start, y_start = 5, 5
     rotations = [None, cv2.ROTATE_90_CLOCKWISE, 
