@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import string
 import random
+import os
 
 def generate_random_ascii():
     char = string.ascii_uppercase + string.ascii_lowercase + string.digits
@@ -27,7 +28,7 @@ def cv2_ascii(font, font_size, thick, coords):
     mask = cv2.bitwise_not(cv2.merge((mask, mask, mask)))
     return mask
 
-if __name__ == "__main__":
+def pdi_pipeline(img_path):
     # random type of font
     font_combination = generate_random_font_type()
     font = font_combination["font"]
@@ -38,26 +39,34 @@ if __name__ == "__main__":
     # image processing
     x_start, y_start = 5, 5
     rotations = [None, cv2.ROTATE_90_CLOCKWISE, 
-                          cv2.ROTATE_90_COUNTERCLOCKWISE, cv2.ROTATE_180]
+                       cv2.ROTATE_90_COUNTERCLOCKWISE, cv2.ROTATE_180]
     for k, rotation in enumerate(rotations):
         # reading images
-        pcb1 = cv2.imread('dataset/hand_picked/12000001_original.jpg')
-        pcb1_bin = cv2.bitwise_not(cv2.imread('dataset/hand_picked/12000001_original.jpg', 0))
+        pcb = cv2.imread(img_path)
+        new_name = img_path[:-4] + str(k) + img_path[-4:]
         for j in range(21):
             for i in range (21):
-                sub_image = cv2.bitwise_not(pcb1[x_start:x_start + 30, y_start:y_start + 30, :]) / 255
+                sub_image = cv2.bitwise_not(pcb[x_start:x_start + 30, y_start:y_start + 30, :]) / 255
                 blackness = np.sum(sub_image)
                 if blackness < 90:
                     ascii_mask = cv2_ascii(font, font_size, thick, coords)
                     if rotation is not None:
                         ascii_mask = cv2.rotate(ascii_mask, rotation)
-                    pcb1[x_start:x_start + 30, y_start:y_start + 30, :] = ascii_mask
+                    pcb[x_start:x_start + 30, y_start:y_start + 30, :] = ascii_mask
                 x_start += 30
                 if i == 20:
                     x_start = 5
             y_start += 30
             if j == 20:
                 y_start = 5
-    
-        cv2.imshow("img", pcb1)
-        cv2.waitKey(0)
+                cv2.imwrite(new_name, pcb)
+
+
+if __name__ == "__main__":
+
+    images_path = os.getcwd() + "/dataset/hand_picked"
+    for root, dir, files in os.walk(images_path):
+        for image in files:
+            # reading image
+            complete_path = root + "/" + image
+            pdi_pipeline(complete_path)
