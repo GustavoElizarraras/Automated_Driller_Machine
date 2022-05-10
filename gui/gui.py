@@ -77,8 +77,7 @@ def eliminar():
     CuadradoAgregados.pop(ListAgregar.curselection()[0])
     BarrenosAgregados.pop(ListAgregar.curselection()[0])
     ListAgregar.delete(0,END)
-    BotTacheAgregar.pack()
-    BotTacheAgregar.pack_forget()
+    BotTacheAgregar.place_forget()
     i=0
     for barreno in CuadradoAgregados:
         ListAgregar.insert(END,"BN"+str(i))
@@ -108,6 +107,7 @@ def MoverAbajo():
         Agregarbarreno=(Agregarbarreno[0],ycircuito+484)
     destruirBarreno(BarrenoNuevo)
     BarrenoNuevo=dibujarCuadrado(Principal,"blue",Agregarbarreno)     
+
 def MoverIzquierda():
     global Agregarbarreno,BarrenoNuevo 
     if Agregarbarreno[0]-Eslaider.get()>=(xcircuito):  
@@ -116,6 +116,7 @@ def MoverIzquierda():
         Agregarbarreno=(xcircuito,Agregarbarreno[1])
     destruirBarreno(BarrenoNuevo)
     BarrenoNuevo=dibujarCuadrado(Principal,"blue",Agregarbarreno)  
+
 def MoverDerecha():
     global Agregarbarreno,BarrenoNuevo   
     if Agregarbarreno[0]+Eslaider.get()<=(xcircuito+786):  
@@ -136,6 +137,7 @@ def SeleccionarEliminar(event):
         destruirBarreno(CuadradoPrincipales[ListEliminar1.curselection()[0]])   
         CuadradoPrincipales[ListEliminar1.curselection()[0]]=dibujarCuadrado(Principal,"yellow",BarrenosOrigenales[ListEliminar1.curselection()[0]])
         BotTacheEliminar.place(x=1010,y=150)
+        BotTacheEliminar2.place_forget()
 
 def eliminar1():
     global CuadradosEliminados,CuadradoPrincipales,BarrenosOrigenales,BarrenosEliminados
@@ -143,8 +145,7 @@ def eliminar1():
     BarrenosEliminados.append(BarrenosOrigenales[ListEliminar1.curselection()[0]])
     CuadradoPrincipales.pop(ListEliminar1.curselection()[0])
     BarrenosOrigenales.pop(ListEliminar1.curselection()[0])
-    BotTacheEliminar.pack()
-    BotTacheEliminar.pack_forget()
+    BotTacheEliminar.place_forget()
     ListEliminar1.delete(0,END)
     CuadradosEliminados.append(dibujarCuadrado(Principal,"black",BarrenosEliminados[-1]))
     i=0
@@ -168,6 +169,7 @@ def SeleccionarRehacer(event):
         BotTacheEliminar2.place(x=1010,y=350)
         destruirBarreno(CuadradosEliminados[ListEliminar2.curselection()[0]]) 
         CuadradosEliminados[ListEliminar2.curselection()[0]]=dibujarCuadrado(Principal,"cyan",BarrenosEliminados[ListEliminar2.curselection()[0]])
+        BotTacheEliminar.place_forget()
 
 def eliminar2():
     global CuadradosEliminados,CuadradoPrincipales,BarrenosOrigenales,BarrenosEliminados
@@ -175,8 +177,7 @@ def eliminar2():
     BarrenosOrigenales.append(BarrenosEliminados[ListEliminar2.curselection()[0]])
     CuadradosEliminados.pop(ListEliminar2.curselection()[0])
     BarrenosEliminados.pop(ListEliminar2.curselection()[0])
-    BotTacheEliminar2.pack()
-    BotTacheEliminar2.pack_forget()
+    BotTacheEliminar2.place_forget()
     ListEliminar1.delete(0,END)
     CuadradoPrincipales.append(dibujarCuadrado(Principal,"red",BarrenosOrigenales[-1]))
     i=0
@@ -199,26 +200,16 @@ def salirEliminar():
 def transicion(antiguo,nuevo):
     global CuadradoPrincipales,BarrenoNuevo,CuadradoAgregados,Agregarbarreno,BarrenosOrigenales,CuadradosEliminados
     if antiguo==0:
-        BotEscanear.pack()
-        BotEscanear.pack_forget()
-        EtiCircuito.pack()
-        EtiCircuito.pack_forget()
-        ImaCircuito.pack()
-        ImaCircuito.pack_forget()
-        
+        BotEscanear.place_forget()
+        EtiCircuito.place_forget()
+        ImaCircuito.place_forget()        
     elif antiguo==1:
-        EtiCircuito.pack()
-        EtiCircuito.pack_forget()
-        ImaCircuito.pack()
-        ImaCircuito.pack_forget()
-        BotMas.pack()
-        BotVolver.pack()
-        BotMenos.pack()
-        BotPalomita.pack()
-        BotMas.pack_forget()
-        BotVolver.pack_forget()
-        BotMenos.pack_forget()
-        BotPalomita.pack_forget()
+        EtiCircuito.place_forget()
+        ImaCircuito.place_forget()
+        BotMas.place_forget()
+        BotVolver.place_forget()
+        BotMenos.place_forget()
+        BotPalomita.place_forget()
         for barreno in CuadradoPrincipales:
             destruirBarreno(barreno)           
         CuadradoPrincipales=[]
@@ -226,31 +217,19 @@ def transicion(antiguo,nuevo):
             destruirBarreno(barreno)
         CuadradoAgregados=[]
     elif antiguo==2:
-        EtiCircuito.pack()
-        EtiCircuito.pack_forget()
-        ImaCircuito.pack()
-        ImaCircuito.pack_forget()
-        BotSalir.pack()
-        BotIzquierda.pack()
-        BotDerecha.pack()
-        BotArriba.pack()
-        BotAbajo.pack()
-        BotAgregar.pack()
-        BotSalir.pack_forget()
-        BotIzquierda.pack_forget()
-        BotDerecha.pack_forget()
-        BotArriba.pack_forget()
-        BotAbajo.pack_forget()
-        BotAgregar.pack_forget()
+        EtiCircuito.place_forget()
+        ImaCircuito.place_forget()
+        BotSalir.place_forget()
+        BotIzquierda.place_forget()
+        BotDerecha.place_forget()
+        BotArriba.place_forget()
+        BotAbajo.place_forget()
+        BotAgregar.place_forget()
         destruirBarreno(BarrenoNuevo)
-        Eslaider.pack()
-        Eslaider.pack_forget()
-        ListAgregar.pack()
-        scrollbar.pack()
-        ListAgregar.pack_forget()
-        scrollbar.pack_forget()
-        BotTacheAgregar.pack()
-        BotTacheAgregar.pack_forget()
+        Eslaider.place_forget()
+        ListAgregar.place_forget()
+        scrollbar.place_forget()
+        BotTacheAgregar.place_forget()
         for barreno in CuadradoPrincipales:
             destruirBarreno(barreno)
         CuadradoPrincipales=[]
@@ -260,24 +239,15 @@ def transicion(antiguo,nuevo):
     elif antiguo==3:
         for barreno in CuadradoPrincipales:
             destruirBarreno(barreno)
-        EtiCircuito.pack()
-        EtiCircuito.pack_forget()
-        ImaCircuito.pack()
-        ImaCircuito.pack_forget()
-        BotSalir1.pack()
-        BotSalir1.pack_forget()
-        ListEliminar1.pack()
-        ListEliminar1.pack_forget()
-        scrollbar2.pack()
-        scrollbar2.pack_forget()
-        BotTacheEliminar.pack()
-        BotTacheEliminar.pack_forget()
-        ListEliminar2.pack()
-        ListEliminar2.pack_forget()
-        scrollbar3.pack()
-        scrollbar3.pack_forget()
-        BotTacheEliminar2.pack()
-        BotTacheEliminar2.pack_forget()
+        EtiCircuito.place_forget()
+        ImaCircuito.place_forget()
+        BotSalir1.place_forget()
+        ListEliminar1.place_forget()
+        scrollbar2.place_forget()
+        BotTacheEliminar.place_forget()
+        ListEliminar2.place_forget()
+        scrollbar3.place_forget()
+        BotTacheEliminar2.place_forget()
         for barreno in CuadradosEliminados:
             destruirBarreno(barreno)
         for barreno in CuadradoPrincipales:
@@ -285,27 +255,16 @@ def transicion(antiguo,nuevo):
         CuadradoPrincipales=[]
         CuadradosEliminados=[]
     elif antiguo==4:
-        ImaCircuito.pack()
-        EtiCircuito.pack()
-        EtiTrabajando=Label(Principal,fg="green",bg="white",font=("Arial",15),text="Perforando "+str(len(BarrenosOrigenales))+" barrenos...")
-        EtiTrabajando.pack()
-        BotParo.pack()
-        EtiTrabajando.pack_forget()
-        BotParo.pack_forget()
-        ImaCircuito.pack_forget()
-        EtiCircuito.pack_forget()
+        EtiTrabajando.place_forget()       
+        BotParo.place_forget()
+        ImaCircuito.place_forget()
+        EtiCircuito.place_forget()
         for barreno in CuadradoPrincipales:
             destruirBarreno(barreno)
         CuadradoPrincipales=[]
     elif antiguo==5:
-        Etiwarning.pack()
-        BotReanudar.pack()
-        EtiTrabajando=Label(Principal,fg="green",bg="white",font=("Arial",15),text="Perforando "+str(len(BarrenosOrigenales))+" barrenos...")
-        EtiTrabajando.pack()
-        Etiwarning.pack_forget()
-        BotReanudar.pack_forget()
-        EtiTrabajando.pack_forget()
-
+        Etiwarning.place_forget()
+        BotReanudar.place_forget()
 
     if nuevo==0:
         BotEscanear.place(x=920,y=200)
@@ -315,7 +274,7 @@ def transicion(antiguo,nuevo):
         ImaCircuito.place(x=xcircuito,y=ycircuito)  
         EtiCircuito.place(x=400,y=50)
         BotMas.place(x=1020,y=300)
-        BotVolver.place(x=920,y=200)
+        BotVolver.place(x=945,y=200)
         BotMenos.place(x=950,y=300)
         BotPalomita.place(x=970,y=380)
         for barreno in BarrenosOrigenales:
@@ -351,17 +310,15 @@ def transicion(antiguo,nuevo):
     elif nuevo==4:
         ImaCircuito.place(x=xcircuito,y=ycircuito)  
         EtiCircuito.place(x=400,y=50)
-        EtiTrabajando=Label(Principal,fg="green",bg="white",font=("Arial",15),text="Perforando "+str(len(BarrenosOrigenales))+" barrenos...")
+        EtiTrabajando.configure(text="Perforando "+str(len(BarrenosOrigenales))+" barrenos...")
         EtiTrabajando.place(x=875,y=150)
-        BotParo.place(x=875,y=250)
+        BotParo.place(x=900,y=250)
         for barreno in BarrenosOrigenales:
             CuadradoPrincipales.append(dibujarCuadrado(Principal,"red",barreno))
     elif nuevo==5:
         Etiwarning.place(x=200,y=200)
         BotReanudar.place(x=400,y=625)
-
-        
-        
+    
 Principal=Frame(raiz,width=1150, height=720,bg="white")
 Principal.pack()
 EtiCircuito=Label(Principal,text="Circuito", fg="blue",bg="white",font=("Arial",30))
@@ -407,6 +364,5 @@ BotParo=Button(Principal,text="Paro",bg="red",font=("Arial",40),command=lambda: 
 
 Etiwarning=Label(Principal,image=warning)
 BotReanudar=Button(Principal,text="Reanudar",bg="green",font=("Arial",30),command=lambda: transicion(5,4))
-
 
 raiz.mainloop()
