@@ -316,8 +316,8 @@ def transicion(antiguo,nuevo):
         for barreno in BarrenosOrigenales:
             CuadradoPrincipales.append(dibujarCuadrado(Principal,"red",barreno))
     elif nuevo==5:
-        Etiwarning.place(x=200,y=200)
-        BotReanudar.place(x=400,y=625)
+        Etiwarning.place(x=375,y=100)
+        BotReanudar.place(x=485,y=550)
     
 Principal=Frame(raiz,width=1150, height=720,bg="white")
 Principal.pack()
@@ -362,7 +362,7 @@ BotTacheEliminar2=Button(Principal,image=reciclar,bg="white",command=lambda: eli
 EtiTrabajando=Label(Principal,fg="green",bg="white",font=("Arial",15),text="Perforando "+str(len(BarrenosOrigenales))+" barrenos...")
 BotParo=Button(Principal,text="Paro",bg="red",font=("Arial",40),command=lambda: transicion(4,5))
 
-Etiwarning=Label(Principal,image=warning)
+Etiwarning=Label(Principal,image=warning,bg="white")
 BotReanudar=Button(Principal,text="Reanudar",bg="green",font=("Arial",30),command=lambda: transicion(5,4))
 
 raiz.mainloop()
