@@ -3,7 +3,9 @@ import csv
 import pandas as pd
 import absl
 import tensorflow as tf
+import contextlib2
 from object_detection.utils import dataset_util
+from object_detection.dataset_tools import tf_record_creation_util
 
 """
 Usage:
@@ -74,16 +76,23 @@ def create_tf_example(image_row):
 
 
 def main(_):
-    writer = tf.io.TFRecordWriter(FLAGS.output_path)
+    # writer = tf.io.TFRecordWriter(FLAGS.output_path)
+    num_shards=20
+    # output_filebase='/path/to/train_dataset.record'
 
-    with open(FLAGS.csv_input, "r") as r:
-        reader = csv.reader(r)
-        next(reader)
-        for row in reader:
-            tf_example = create_tf_example(row)
-            writer.write(tf_example.SerializeToString())
+    with contextlib2.ExitStack() as tf_record_close_stack:
+        output_tfrecords = tf_record_creation_util.open_sharded_output_tfrecords(
+                                tf_record_close_stack, FLAGS.output_path, num_shards)
+        with open(FLAGS.csv_input, "r") as r:
+            reader = csv.reader(r)
+            next(reader)
+            for i, row in enumerate(reader):
+                tf_example = create_tf_example(row)
+                output_shard_index = i % num_shards
+                output_tfrecords[output_shard_index].write(tf_example.SerializeToString())
+            # writer.write(tf_example.SerializeToString())
 
-    writer.close()
+    # writer.close()
 
 if __name__ == '__main__':
   absl.app.run(main)
