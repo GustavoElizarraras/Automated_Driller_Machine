@@ -19,15 +19,12 @@ flags.DEFINE_string('output_path', '', 'Path to output TFRecord')
 FLAGS = flags.FLAGS
 
 def correct_number_type(nums):
-    for num in nums:
-        if "-" in num:
-            return 0
-        if "." in num:
-            if "." == num[3]:
-                num = num[:3]
-            elif "." == num[2]:
-                num = num[:2]
-        return int(num)
+    if "-" in num:
+        return 0
+    if "." in num:
+        if "." == num[-2]:
+            num = num[:-2]
+    return int(num)
 
 def create_tf_example(image_row):
     filename = image_row[0] # Filename of the image. Empty if image is not from file
