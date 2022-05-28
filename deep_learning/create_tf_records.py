@@ -18,7 +18,7 @@ flags.DEFINE_string('csv_input', '', 'Path to the CSV input')
 flags.DEFINE_string('output_path', '', 'Path to output TFRecord')
 FLAGS = flags.FLAGS
 
-def correct_number_type(nums):
+def correct_number_type(num):
     if "-" in num:
         return 0
     if "." in num:
@@ -42,8 +42,7 @@ def create_tf_example(image_row):
     ymins = [] # List of normalized top y coordinates in bounding box (1 per box)
     ymaxs = [] # List of normalized bottom y coordinates in bounding box
                 # (1 per box)
-    classes_text = [] # List of string class name of bounding box (1 per box)
-    classes = [] # List of integer class id of bounding box (1 per box)
+
     
     positions = [correct_number_type(s) for s in image_row[1:] if s != ""]
 
@@ -52,8 +51,6 @@ def create_tf_example(image_row):
         ymins.append(positions[i+1] / width)
         xmaxs.append(positions[i+2] / width)
         ymaxs.append(positions[i+3] / width)
-        classes.append(1)
-        classes_text.append("pin-hole".encode('utf8'))
 
     tf_example = tf.train.Example(features=tf.train.Features(feature={
         'image/height': dataset_util.int64_feature(height),
@@ -66,15 +63,13 @@ def create_tf_example(image_row):
         'image/object/bbox/xmax': dataset_util.float_list_feature(xmaxs),
         'image/object/bbox/ymin': dataset_util.float_list_feature(ymins),
         'image/object/bbox/ymax': dataset_util.float_list_feature(ymaxs),
-        'image/object/class/text': dataset_util.bytes_list_feature(classes_text),
-        'image/object/class/label': dataset_util.int64_list_feature(classes),
     }))
     return tf_example
 
 
 def main(_):
     # writer = tf.io.TFRecordWriter(FLAGS.output_path)
-    num_shards=20
+    num_shards=10
     # output_filebase='/path/to/train_dataset.record'
 
     with contextlib2.ExitStack() as tf_record_close_stack:
