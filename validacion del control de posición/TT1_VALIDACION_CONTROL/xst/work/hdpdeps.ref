@@ -1,0 +1,9 @@
+V3 3
+FL "C:/Users/sando/OneDrive/Escritorio/kut/horchaTTa I/Control/TT1_VALIDACION_CONTROL/LCD.vhd" 2022/05/25.17:54:42 P.20131013
+EN work/LCD 1653519285 \
+      FL "C:/Users/sando/OneDrive/Escritorio/kut/horchaTTa I/Control/TT1_VALIDACION_CONTROL/LCD.vhd" \
+      PB ieee/std_logic_1164 1381692176 PB ieee/std_logic_arith 1381692177 \
+      PB ieee/STD_LOGIC_UNSIGNED 1381692179 PB ieee/NUMERIC_STD 1381692181
+AR work/LCD/Behavioral 1653519286 \
+      FL "C:/Users/sando/OneDrive/Escritorio/kut/horchaTTa I/Control/TT1_VALIDACION_CONTROL/LCD.vhd" \
+      EN work/LCD 1653519285

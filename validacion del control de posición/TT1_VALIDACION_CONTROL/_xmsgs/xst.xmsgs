@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- IMPORTANT: This is an internal file that has been generated
+     by the Xilinx ISE software.  Any direct editing or
+     changes made to this file may result in unpredictable
+     behavior or data corruption.  It is strongly advised that
+     users do not edit the contents of this file. -->
+<messages>
+<msg type="info" file="Xst" num="1739" delta="old" >HDL ADVISOR - &quot;<arg fmt="%s" index="1">C:/Users/sando/OneDrive/Escritorio/kut/horchaTTa I/Control/TT1_VALIDACION_CONTROL/LCD.vhd</arg>&quot; line <arg fmt="%d" index="2">48</arg>: declaration of a buffer port will make it difficult for you to validate this design by simulation. It is preferable to declare it as output.
+</msg>
+
+<msg type="info" file="Xst" num="1561" delta="old" >&quot;<arg fmt="%s" index="1">C:/Users/sando/OneDrive/Escritorio/kut/horchaTTa I/Control/TT1_VALIDACION_CONTROL/LCD.vhd</arg>&quot; line <arg fmt="%d" index="2">547</arg>: Mux is complete : default of case is discarded
+</msg>
+
+</messages>
+
