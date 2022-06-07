@@ -1,0 +1,8 @@
+INTSTYLE=ise
+INFILE=C:\Users\sando\OneDrive\Escritorio\kut\horchaTTa I\Control\TT1_VALIDACION_CONTROL\LCD.ncd
+OUTFILE=C:\Users\sando\OneDrive\Escritorio\kut\horchaTTa I\Control\TT1_VALIDACION_CONTROL\LCD.bit
+FAMILY=Spartan3E
+PART=xc3s500e-4fg320
+WORKINGDIR=C:\Users\sando\OneDrive\Escritorio\kut\horchaTTa I\Control\TT1_VALIDACION_CONTROL
+LICENSE=WebPack
+USER_INFO=211811288_0_0_051
