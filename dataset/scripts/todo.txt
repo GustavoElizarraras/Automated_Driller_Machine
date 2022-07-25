@@ -1,1 +1,0 @@
-OpenCV scripts for detecting the holes and make holes in a subfolder
