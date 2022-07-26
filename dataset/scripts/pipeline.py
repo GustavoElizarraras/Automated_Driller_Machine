@@ -1,51 +1,67 @@
 import cv2
 import os
-import shutil
+import random
+import numpy as np
 
-images_path = os.getcwd() + "/dataset/hand_picked"
+images_path = os.getcwd() + "/dataset/hand_picked_originals"
 parameters = {
-    "120": { "param2" :   9, "minRadius":   1, "maxRadius":   6 },
-    "121": { "param2" : 13, "minRadius":   7, "maxRadius": 23 },
-    "123": { "param2" : 12, "minRadius": 13, "maxRadius": 24 },
-    "130": { "param2" : 13, "minRadius":   8, "maxRadius": 24 },
-    "901": { "param2" : 13, "minRadius":   8, "maxRadius": 20 },
-    "920": { "param2" : 11, "minRadius":   5, "maxRadius": 10 }
+    "120": { "param2" :  8, "minRadius":   1, "maxRadius":  6, "kernel": (1,1) },
+    "121": { "param2" : 15, "minRadius":   8, "maxRadius": 23, "kernel": (3,3) },
+    "123": { "param2" : 14, "minRadius":  12, "maxRadius": 23, "kernel": (7,7) },
+    "130": { "param2" : 13, "minRadius":   8, "maxRadius": 24, "kernel": (3,3) },
+    "901": { "param2" : 13, "minRadius":   8, "maxRadius": 20, "kernel": (2,2) },
+    "920": { "param2" : 11, "minRadius":   5, "maxRadius": 10, "kernel": (7,7) }
 }
+rotations = [None, cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_90_COUNTERCLOCKWISE, cv2.ROTATE_180]
 
 for root, dir, files in os.walk(images_path):
     for image in files:
+        n = random.randint(0,3)
         # reading image
-        if "original" in image:
-            image_type = image[:3]
-            complete_path = root + "/" + image
-            modified_image_name = image.replace("original", "modified")
-            modified_path = root + "/" + modified_image_name
-            pcb_3_ch = cv2.imread(complete_path)
-            pcb_3_ch_modified = cv2.imread(modified_path)
-            pcb_bin = cv2.bitwise_not(cv2.imread(complete_path, 0))
-            # detected circles
-            try:
-                detected_circles = cv2.HoughCircles(pcb_bin, cv2.HOUGH_GRADIENT, 1, 20, param1 = 50,
-                            param2 = parameters[image_type]["param2"],
-                            minRadius = parameters[image_type]["minRadius"],
-                            maxRadius = parameters[image_type]["maxRadius"])
+        image_type = image[:3]
+        complete_path = root + "/" + image_type + image
 
-                for pt in detected_circles[0, :]:
-                    # circle coords
-                    a, b, r = int(pt[0]), int(pt[1]), int(pt[2])
-                    r2 = int(0.62*r)
-                    # insert a smaller white circle when a black circle is detected
-                    cv2.circle(pcb_3_ch, (a, b), r2, (255, 255, 255), -1)
-                    cv2.imwrite(complete_path, pcb_3_ch)
-                    cv2.circle(pcb_3_ch_modified, (a, b), r2, (255, 255, 255), -1)
-                    cv2.imwrite(modified_path, pcb_3_ch_modified)
-                    # writing positions to a txt file
-                    x1, x2 = str(a - r), str(a + r)
-                    y1, y2 = str(b + r), str(b - r)
-                    with open("dataset/locations.txt", "a") as f:
-                        f.write(image + "," + x1 + "," + y1 + "," + x2 + "," + y2 + "\n")
-                        f.write(modified_image_name + "," + x1 + "," + y1 + "," + x2 + "," + y2 + "\n")
-            except Exception as e:
-                print(image, e)
-                os.remove(complete_path)
-                os.remove(modified_path)
+        pcb = cv2.imread(complete_path)
+        pcb_bin = cv2.bitwise_not(cv2.imread(complete_path, 0))
+        # detected circles
+
+
+        pcb_erode = cv2.erode(pcb_bin, parameters[image_type]["kernel"],iterations = 1)
+
+        if image_type == "901":
+            pcb_erode = cv2.dilate(pcb_bin, parameters[image_type]["kernel"],iterations = 1)
+
+        pcb_rotated = cv2.rotate(pcb_erode, rotations[n])
+
+        detected_circles = cv2.HoughCircles(pcb_rotated, cv2.HOUGH_GRADIENT, 1, 20, param1 = 50,
+                    param2 = parameters[image_type]["param2"],
+                    minRadius = parameters[image_type]["minRadius"],
+                    maxRadius = parameters[image_type]["maxRadius"])
+        
+        locations = [image]
+        saved_pcb = cv2.bitwise_not(pcb_rotated)
+        for pt in detected_circles[0, :]:
+            # circle coords
+            a, b, r = int(pt[0]), int(pt[1]), int(pt[2])
+
+            if image_type == "120":
+                r = int(3*r)
+                # insert a bigger white circle when a black circle is detected
+                cv2.circle(saved_pcb, (a, b), r, (255, 255, 255), -1)
+            elif image_type == "901":
+                r = int(0.6*r)
+                # insert a smaller white circle when a black circle is detected
+                cv2.circle(saved_pcb, (a, b), r, (255, 255, 255), -1)
+    
+            cv2.imwrite(complete_path, saved_pcb)
+
+            # writing positions to a txt file
+            x1, x2 = str(a - r), str(a + r)
+            y1, y2 = str(b + r), str(b - r)
+            locations.append(x1)
+            locations.append(y1)
+            locations.append(x2)
+            locations.append(y2)
+        with open("dataset/scrapped_locations.csv", "a") as w:
+            writer = csv.writer(w)
+            writer.writerow(locations)
