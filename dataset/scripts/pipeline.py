@@ -2,6 +2,7 @@ import cv2
 import os
 import random
 import numpy as np
+import csv
 
 images_path = os.getcwd() + "/dataset/hand_picked_originals"
 parameters = {
@@ -19,12 +20,11 @@ for root, dir, files in os.walk(images_path):
         n = random.randint(0,3)
         # reading image
         image_type = image[:3]
-        complete_path = root + "/" + image_type + image
+        complete_path = "dataset/edited_images" + "/" + image_type + image
 
-        pcb = cv2.imread(complete_path)
-        pcb_bin = cv2.bitwise_not(cv2.imread(complete_path, 0))
+        pcb = cv2.imread(root + "/" + image)
+        pcb_bin = cv2.bitwise_not(cv2.imread(root + "/" + image, 0))
         # detected circles
-
 
         pcb_erode = cv2.erode(pcb_bin, parameters[image_type]["kernel"],iterations = 1)
 
@@ -40,28 +40,31 @@ for root, dir, files in os.walk(images_path):
         
         locations = [image]
         saved_pcb = cv2.bitwise_not(pcb_rotated)
-        for pt in detected_circles[0, :]:
-            # circle coords
-            a, b, r = int(pt[0]), int(pt[1]), int(pt[2])
+        try:
+            for pt in detected_circles[0, :]:
+                # circle coords
+                a, b, r = int(pt[0]), int(pt[1]), int(pt[2])
 
-            if image_type == "120":
-                r = int(3*r)
-                # insert a bigger white circle when a black circle is detected
-                cv2.circle(saved_pcb, (a, b), r, (255, 255, 255), -1)
-            elif image_type == "901":
-                r = int(0.6*r)
-                # insert a smaller white circle when a black circle is detected
-                cv2.circle(saved_pcb, (a, b), r, (255, 255, 255), -1)
-    
-            cv2.imwrite(complete_path, saved_pcb)
+                if image_type == "120":
+                    r = int(3*r)
+                    # insert a bigger white circle when a black circle is detected
+                    cv2.circle(saved_pcb, (a, b), r, (255, 255, 255), -1)
+                elif image_type == "901":
+                    r = int(0.6*r)
+                    # insert a smaller white circle when a black circle is detected
+                    cv2.circle(saved_pcb, (a, b), r, (255, 255, 255), -1)
+        
+                cv2.imwrite(complete_path, saved_pcb)
 
-            # writing positions to a txt file
-            x1, x2 = str(a - r), str(a + r)
-            y1, y2 = str(b + r), str(b - r)
-            locations.append(x1)
-            locations.append(y1)
-            locations.append(x2)
-            locations.append(y2)
-        with open("dataset/scrapped_locations.csv", "a") as w:
-            writer = csv.writer(w)
-            writer.writerow(locations)
+                # writing positions to a txt file
+                x1, x2 = str(a - r), str(a + r)
+                y1, y2 = str(b + r), str(b - r)
+                locations.append(x1)
+                locations.append(y1)
+                locations.append(x2)
+                locations.append(y2)
+            with open("dataset/scrapped_locations.csv", "a") as w:
+                writer = csv.writer(w)
+                writer.writerow(locations)
+        except:
+            pass
