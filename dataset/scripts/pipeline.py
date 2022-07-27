@@ -8,10 +8,10 @@ images_path = os.getcwd() + "/dataset/hand_picked_originals"
 parameters = {
     "120": { "param2" :  8, "minRadius":   6, "maxRadius":  9, "kernel": (1,1) },
     "121": { "param2" : 15, "minRadius":   8, "maxRadius": 23, "kernel": (3,3) },
-    "123": { "param2" : 14, "minRadius":  12, "maxRadius": 23, "kernel": (7,7) },
+    "123": { "param2" : 13, "minRadius":  12, "maxRadius": 23, "kernel": (7,7) },
     "130": { "param2" : 13, "minRadius":   8, "maxRadius": 24, "kernel": (3,3) },
-    "901": { "param2" : 11, "minRadius":   9, "maxRadius": 20, "kernel": (2,2) },
-    "920": { "param2" :  8, "minRadius":   5, "maxRadius": 10, "kernel": (7,7) }
+    "901": { "param2" : 11, "minRadius":  10, "maxRadius": 20, "kernel": (2,2) },
+    "920": { "param2" :  9, "minRadius":   5, "maxRadius": 10, "kernel": (7,7) }
 }
 rotations = [None, cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_90_COUNTERCLOCKWISE, cv2.ROTATE_180]
 n1 = random.randint(0,3)
@@ -66,7 +66,7 @@ for root, dir, files in os.walk(images_path):
                 locations.append(x2)
                 locations.append(y2)
             n1 = n2
-            with open("dataset/scrapped_locations.csv", "a") as w:
+            with open("dataset/original_locations.csv", "a") as w:
                 writer = csv.writer(w)
                 writer.writerow(locations)
         except:
