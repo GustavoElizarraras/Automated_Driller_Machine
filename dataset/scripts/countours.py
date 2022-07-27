@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
-pcb1 = cv2.imread('dataset/hand_picked_originals/13000027_test.jpg')
-pcb1_bin = cv2.bitwise_not(cv2.imread('dataset/hand_picked_originals/13000027_test.jpg', 0))
+pcb1 = cv2.imread('dataset/hand_picked_originals/12000068_test.jpg')
+pcb1_bin = cv2.bitwise_not(cv2.imread('dataset/hand_picked_originals/12000068_test.jpg', 0))
 
 grosor=1
 fuente=cv2.FONT_HERSHEY_COMPLEX
@@ -18,15 +18,15 @@ cv2.imshow("img0", pcb1_bin)
 cv2.waitKey(0)
 cv2.imshow("img0", cv2.bitwise_not(pcb1_bin))
 cv2.waitKey(0)
-# 120 images: param1 = 50, param2 = 8, minRadius = 1, maxRadius = 6, kernel = (7,7)
-# 121 images: param1 = 50, param2 = 15, minRadius = 8, maxRadius = 23, kernel= (3,3)
+# 120 images: param2 = 9, minRadius = 7, maxRadius = 9
+# 121 images: param2 = 15, minRadius = 8, maxRadius = 23, kernel= (3,3)
 # 123 images: param2 = 14, minRadius = 12, maxRadius = 23. kernel = (7,7)
 # 130 images: param2 = 13, minRadius = 8, maxRadius = 24, kernel = (3,3)
 # 901 images: param2 = 13, minRadius = 8, maxRadius = 20
-# 920 images: param2 = 11, minRadius = 5, maxRadius = 10
+# 920 images: param2 = 11, minRadius = 5, maxRadius = 10, kernel = (7,7)
 detected_circles = cv2.HoughCircles(pcb1_bin, 
                    cv2.HOUGH_GRADIENT, 1, 20, param1 = 50,
-               param2 = 14, minRadius = 8, maxRadius = 19)
+               param2 = 9, minRadius = 7, maxRadius = 9)
 
 for pt in detected_circles[0, :]:
     # circle coords
