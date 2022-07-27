@@ -14,10 +14,12 @@ parameters = {
     "920": { "param2" : 11, "minRadius":   5, "maxRadius": 10, "kernel": (7,7) }
 }
 rotations = [None, cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_90_COUNTERCLOCKWISE, cv2.ROTATE_180]
-
+n1 = random.randint(0,3)
 for root, dir, files in os.walk(images_path):
     for image in files:
-        n = random.randint(0,3)
+        n2 = random.randint(0,3)
+        while n1 == n2:
+            n2 = random.randint(0,3)
         # reading image
         image_type = image[:3]
         complete_path = "dataset/edited_images" + "/" + image_type + "/" + image
@@ -63,6 +65,7 @@ for root, dir, files in os.walk(images_path):
                 locations.append(y1)
                 locations.append(x2)
                 locations.append(y2)
+            n1 = random.randint(0,3)
             with open("dataset/scrapped_locations.csv", "a") as w:
                 writer = csv.writer(w)
                 writer.writerow(locations)
