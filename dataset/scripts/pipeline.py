@@ -6,11 +6,11 @@ import csv
 
 images_path = os.getcwd() + "/dataset/hand_picked_originals"
 parameters = {
-    "120": { "param2" :  8, "minRadius":   1, "maxRadius":  6, "kernel": (1,1) },
+    "120": { "param2" :  9, "minRadius":   7, "maxRadius":  9, "kernel": (1,1) },
     "121": { "param2" : 15, "minRadius":   8, "maxRadius": 23, "kernel": (3,3) },
     "123": { "param2" : 14, "minRadius":  12, "maxRadius": 23, "kernel": (7,7) },
     "130": { "param2" : 13, "minRadius":   8, "maxRadius": 24, "kernel": (3,3) },
-    "901": { "param2" : 13, "minRadius":   8, "maxRadius": 20, "kernel": (2,2) },
+    "901": { "param2" : 13, "minRadius":   9, "maxRadius": 20, "kernel": (2,2) },
     "920": { "param2" : 11, "minRadius":   5, "maxRadius": 10, "kernel": (7,7) }
 }
 rotations = [None, cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_90_COUNTERCLOCKWISE, cv2.ROTATE_180]
@@ -20,7 +20,7 @@ for root, dir, files in os.walk(images_path):
         n = random.randint(0,3)
         # reading image
         image_type = image[:3]
-        complete_path = "dataset/edited_images" + "/" + image_type + image
+        complete_path = "dataset/edited_images" + "/" + image_type + "/" + image
 
         pcb = cv2.imread(root + "/" + image)
         pcb_bin = cv2.bitwise_not(cv2.imread(root + "/" + image, 0))
@@ -45,12 +45,12 @@ for root, dir, files in os.walk(images_path):
                 # circle coords
                 a, b, r = int(pt[0]), int(pt[1]), int(pt[2])
 
-                if image_type == "120":
+                if image_type == "120" or image_type == "920":
                     r = int(3*r)
                     # insert a bigger white circle when a black circle is detected
                     cv2.circle(saved_pcb, (a, b), r, (255, 255, 255), -1)
-                elif image_type == "901":
-                    r = int(0.6*r)
+                elif image_type == "901" or image_type == "121":
+                    r = int(0.5*r)
                     # insert a smaller white circle when a black circle is detected
                     cv2.circle(saved_pcb, (a, b), r, (255, 255, 255), -1)
         
