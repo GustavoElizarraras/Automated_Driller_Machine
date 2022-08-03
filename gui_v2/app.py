@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter.messagebox import showerror
 from PIL import Image, ImageTk
+import cv2
+import numpy as np
 
 class ImageInitializer(ttk.Frame):
     def __init__(self, container):
@@ -10,8 +12,8 @@ class ImageInitializer(ttk.Frame):
         # PCB Image
         self.img = Image.open("gui/12000001_temp.jpg")
         self.render = ImageTk.PhotoImage(self.img)
-        self.img_label = ttk.Label(self.container, image=self.render, compound="right")
-        self.img_label.place(x = 10, y = 10)
+        self.img_label = ttk.Label(self.container, image=self.render)
+        self.img_label.place(x = 0, y = 0)
 
 class ControlFrame(ImageInitializer):
     def __init__(self, container):
@@ -53,11 +55,29 @@ class ControlFrame(ImageInitializer):
 class AddPCBHole(ImageInitializer):
     def __init__(self, container):
         super().__init__(container)
+        self.pts = []
+        self.img_copy = np.asarray(self.img.copy())
         self.create_widgets()
 
     def create_widgets(self):
         self.label = ttk.Label(self.master, text='This is the add frame')
         self.label.place(x = 700, y = 10)
+        self.img_label.bind("<Button-1>", self.draw_cross)
+
+    # Create a function based on a CV2 Event (Left button click)
+    def draw_cross(self, event):
+            radius = 10
+            line_thickness = 2
+            cv2.line(self.img_copy, (event.x - 15, event.y), (event.x + 15, event.y), (0,0,255), thickness=line_thickness)
+            cv2.line(self.img_copy, (event.x, event.y - 15), (event.x, event.y + 15), (0,0,255), thickness=line_thickness)
+            self.img_label.destroy()
+            self.render_img()
+
+    def render_img(self):
+        self.render = ImageTk.PhotoImage(Image.fromarray(self.img_copy))
+        self.img_label = ttk.Label(self.container, image=self.render)
+        self.img_label.place(x = 0, y = 0)
+        self.img_label.bind("<Button-1>", self.draw_cross)
 
 class App(tk.Tk):
     def __init__(self):
