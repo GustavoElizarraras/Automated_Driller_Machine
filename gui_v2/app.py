@@ -9,11 +9,25 @@ class ImageInitializer(ttk.Frame):
     def __init__(self, container):
         super().__init__(container)
         self.container = container
+        # List of coordinates (dummy for now)
+        self.coords = [(100,100), (320,300)]
         # PCB Image
         self.img = Image.open("gui/12000001_temp.jpg")
-        self.render = ImageTk.PhotoImage(self.img)
-        self.img_label = ttk.Label(self.container, image=self.render)
+        # image for opencv
+        self.img_array = np.asarray(self.img.copy())
+        self.render_img()
+    
+    def render_img(self):
+        self.show_holes_center()
+        self.render = ImageTk.PhotoImage(Image.fromarray(self.img_array))
+        self.img_label = ttk.Label(self.container, image=self.render, cursor="cross")
         self.img_label.place(x = 0, y = 0)
+
+    def show_holes_center(self):
+        for c in self.coords:
+            cv2.circle(img=self.img_array, center = (c[0], c[1]),
+                       radius=5, color =(0,255,0), thickness=-1)
+
 
 class ControlFrame(ImageInitializer):
     def __init__(self, container):
@@ -56,7 +70,6 @@ class AddPCBHole(ImageInitializer):
     def __init__(self, container):
         super().__init__(container)
         self.pts = []
-        self.img_copy = np.asarray(self.img.copy())
         self.create_widgets()
 
     def create_widgets(self):
@@ -64,20 +77,13 @@ class AddPCBHole(ImageInitializer):
         self.label.place(x = 700, y = 10)
         self.img_label.bind("<Button-1>", self.draw_cross)
 
-    # Create a function based on a CV2 Event (Left button click)
     def draw_cross(self, event):
-            radius = 10
             line_thickness = 2
-            cv2.line(self.img_copy, (event.x - 15, event.y), (event.x + 15, event.y), (0,0,255), thickness=line_thickness)
-            cv2.line(self.img_copy, (event.x, event.y - 15), (event.x, event.y + 15), (0,0,255), thickness=line_thickness)
+            cv2.line(self.img_array, (event.x - 15, event.y), (event.x + 15, event.y), (0,0,255), thickness=line_thickness)
+            cv2.line(self.img_array, (event.x, event.y - 15), (event.x, event.y + 15), (0,0,255), thickness=line_thickness)
             self.img_label.destroy()
             self.render_img()
-
-    def render_img(self):
-        self.render = ImageTk.PhotoImage(Image.fromarray(self.img_copy))
-        self.img_label = ttk.Label(self.container, image=self.render)
-        self.img_label.place(x = 0, y = 0)
-        self.img_label.bind("<Button-1>", self.draw_cross)
+            self.coords.append((event.x, event.y))
 
 class App(tk.Tk):
     def __init__(self):
