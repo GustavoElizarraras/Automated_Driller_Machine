@@ -6,28 +6,26 @@ import cv2
 import numpy as np
 
 class ImageInitializer(ttk.Frame):
-    def __init__(self, container):
+    def __init__(self, container, img_array):
         super().__init__(container)
         self.container = container
+        self.img_array = img_array
         # List of coordinates (dummy for now)
         self.coords = [(100,100), (320,300)]
-        # PCB Image
-        self.img = Image.open("gui/12000001_temp.jpg")
-        # image for opencv
-        self.img_array = np.asarray(self.img.copy())
         self.render_img(self.img_array)
     
-    def render_img(self, img_array):
+    def render_img(self, img_array, binding=None):
         for c in self.coords:
             cv2.circle(img=img_array, center = (c[0], c[1]),
                        radius=5, color =(0,255,0), thickness=-1)
         self.render = ImageTk.PhotoImage(Image.fromarray(img_array))
         self.img_label = ttk.Label(self.container, image=self.render, cursor="cross")
         self.img_label.place(x = 0, y = 0)
+        self.img_label.bind("<Button-1>", binding)
 
 class ControlFrame(ImageInitializer):
-    def __init__(self, container):
-        super().__init__(container)
+    def __init__(self, container, img_array):
+        super().__init__(container, img_array)
         self.create_widgets()
 
     def create_widgets(self):
@@ -53,7 +51,7 @@ class ControlFrame(ImageInitializer):
 
     def press_add(self):
         self.clear_frame()
-        frame = AddPCBHole(self.container)
+        frame = AddPCBHole(self.container, self.img_array)
         frame.tkraise()
 
 #     def press_del(self):
@@ -63,29 +61,35 @@ class ControlFrame(ImageInitializer):
 #         pass
 
 class AddPCBHole(ImageInitializer):
-    def __init__(self, container):
-        super().__init__(container)
-        self.pts = []
+    def __init__(self, container, img_array):
+        super().__init__(container, img_array)
         self.img_array_copy = self.img_array.copy()
+        self.img_label.bind("<Button-1>", self.draw_cross)
         self.create_widgets()
 
     def create_widgets(self):
         self.label = ttk.Label(self.master, text='This is the add frame')
         self.label.place(x = 700, y = 10)
-        self.img_label.bind("<Button-1>", self.draw_cross)
 
         # button
-        self.add_button = ttk.Button(self.container, text='Volver')
-        self.add_button.place(x = 700, y = 10)
-        self.add_button.configure(command=self.press_add)
+        self.return_button = ttk.Button(self.container, text='Volver')
+        self.return_button.place(x = 700, y = 50)
+        self.return_button.configure(command=self.return_main)
 
     def draw_cross(self, event):
             line_thickness = 2
             cv2.line(self.img_array_copy, (event.x - 15, event.y), (event.x + 15, event.y), (0,0,255), thickness=line_thickness)
             cv2.line(self.img_array_copy, (event.x, event.y - 15), (event.x, event.y + 15), (0,0,255), thickness=line_thickness)
             self.img_label.destroy()
-            self.render_img(self.img_array_copy)
             self.coords.append((event.x, event.y))
+            self.render_img(self.img_array_copy, self.draw_cross)
+            print(self.coords)
+
+    def return_main(self):
+        for widget in self.container.winfo_children():
+            widget.destroy()
+        frame = ControlFrame(self.container, self.img_array_copy)
+        frame.tkraise()
 
 class App(tk.Tk):
     def __init__(self):
@@ -94,9 +98,26 @@ class App(tk.Tk):
         self.title('BARRENADORA AUTOMATIZADA')
         self.resizable(False, False)
 
+        # self.frames = {}
+        # for F in (ControlFrame, AddPCBHole):
+        #     page_name = F.__name__
+        #     frame = F(parent=self.container, controller=self)
+        #     self.frames[page_name] = frame
+
+        # self.show_frame("StartPage")
+
+    def show_frame(self, page_name):
+        '''Show a frame for the given page name'''
+        frame = self.frames[page_name]
+        frame.tkraise()
+
 if __name__ == "__main__":
+    # PCB Image
+    img = Image.open("gui/12000001_temp.jpg")
+    # image for opencv
+    img_array = np.asarray(img)
     app = App()
-    ControlFrame(app)
+    ControlFrame(app, img_array)
     app.mainloop()
 
 
