@@ -46,7 +46,7 @@ class ControlFrame(ImageInitializer):
         # button
         self.move_button = ttk.Button(self.container, text='Mover barreno')
         self.move_button.place(x = 700, y = 90)
-        # self.convert_button.configure(command=self.convert)
+        self.move_button.configure(command=self.press_move)
 
     def clear_frame(self):
         for widget in self.container.winfo_children():
@@ -57,16 +57,17 @@ class ControlFrame(ImageInitializer):
         frame = AddPCBHole(self.container, self.coords)
         frame.tkraise()
 
+    def press_move(self):
+        self.clear_frame()
+        frame = MovePCBHole(self.container, self.coords)
+        frame.tkraise()
+
 #     def press_del(self):
 #         pass
 
-#     def press_move(self):
-#         pass
-
 class AddPCBHole(ImageInitializer):
-    def __init__(self, container, img_array):
-        super().__init__(container, img_array)
-        # self.img_array_copy = self.img_array.copy()
+    def __init__(self, container, coords):
+        super().__init__(container, coords)
         self.img_label.bind("<Button-1>", self.draw_cross)
         self.create_widgets()
 
@@ -86,7 +87,61 @@ class AddPCBHole(ImageInitializer):
             self.img_label.destroy()
             self.coords.append((event.x, event.y))
             self.render_img(self.img_array, self.draw_cross)
-            print(self.coords)
+
+    def return_main(self):
+        for widget in self.container.winfo_children():
+            widget.destroy()
+        frame = ControlFrame(self.container, self.coords)
+        frame.tkraise()
+
+class MovePCBHole(ImageInitializer):
+    def __init__(self, container, coords):
+        super().__init__(container, coords)
+        self.holes = { f'Barreno {i}':coord for i, coord in enumerate(coords)}
+        self.langs_var = tk.StringVar(value=[hole_num for hole_num in self.holes.keys()])
+        self.create_widgets()
+
+    def create_widgets(self):
+        self.label = ttk.Label(self.master, text='This is the move frame')
+        self.label.place(x = 700, y = 10)
+
+        self.listbox = tk.Listbox(
+            self.container,
+            listvariable=self.langs_var,
+            height=6)
+        self.listbox.place(x = 700, y = 90)
+        self.listbox.bind('<<ListboxSelect>>', self.move_selected)
+
+        # button
+        self.return_button = ttk.Button(self.container, text='Volver')
+        self.return_button.place(x = 700, y = 50)
+        self.return_button.configure(command=self.return_main)
+
+    def move_selected(self, event):
+        self.insert_cursor()
+        # get selected indices
+        selected_hole = self.listbox.curselection()
+        self.label = ttk.Label(self.master, text=selected_hole)
+        self.label.place(x = 700, y = 130)
+
+    def insert_cursor(self):
+        # button
+        self.up = ttk.Button(self.container, text='up')
+        self.up.place(x = 700, y = 200)
+        # self.up.configure(command=self.press_add)
+        # button
+        self.down = ttk.Button(self.container, text='down')
+        self.down.place(x = 700, y = 240)
+        # self.down.configure(command=self.press_add)
+        # button
+        self.left = ttk.Button(self.container, text='left')
+        self.left.place(x = 700, y = 280)
+        # self.left.configure(command=self.press_add)
+        # button
+        self.right = ttk.Button(self.container, text='right')
+        self.right.place(x = 700, y = 320)
+        # self.right.configure(command=self.press_add)
+
 
     def return_main(self):
         for widget in self.container.winfo_children():
@@ -100,14 +155,6 @@ class App(tk.Tk):
         self.geometry("900x700")
         self.title('BARRENADORA AUTOMATIZADA')
         self.resizable(False, False)
-
-        # self.frames = {}
-        # for F in (ControlFrame, AddPCBHole):
-        #     page_name = F.__name__
-        #     frame = F(parent=self.container, controller=self)
-        #     self.frames[page_name] = frame
-
-        # self.show_frame("StartPage")
 
     def show_frame(self, page_name):
         '''Show a frame for the given page name'''
