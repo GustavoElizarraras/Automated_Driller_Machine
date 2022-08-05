@@ -6,12 +6,15 @@ import cv2
 import numpy as np
 
 class ImageInitializer(ttk.Frame):
-    def __init__(self, container, img_array):
+    def __init__(self, container, coords):
         super().__init__(container)
         self.container = container
-        self.img_array = img_array
+        # PCB Image
+        self.img = Image.open("gui/12000001_temp.jpg")
+        # image for opencv
+        self.img_array = np.asarray(self.img)
         # List of coordinates (dummy for now)
-        self.coords = [(100,100), (320,300)]
+        self.coords = coords
         self.render_img(self.img_array)
     
     def render_img(self, img_array, binding=None):
@@ -24,8 +27,8 @@ class ImageInitializer(ttk.Frame):
         self.img_label.bind("<Button-1>", binding)
 
 class ControlFrame(ImageInitializer):
-    def __init__(self, container, img_array):
-        super().__init__(container, img_array)
+    def __init__(self, container, coords):
+        super().__init__(container, coords)
         self.create_widgets()
 
     def create_widgets(self):
@@ -51,7 +54,7 @@ class ControlFrame(ImageInitializer):
 
     def press_add(self):
         self.clear_frame()
-        frame = AddPCBHole(self.container, self.img_array)
+        frame = AddPCBHole(self.container, self.coords)
         frame.tkraise()
 
 #     def press_del(self):
@@ -63,7 +66,7 @@ class ControlFrame(ImageInitializer):
 class AddPCBHole(ImageInitializer):
     def __init__(self, container, img_array):
         super().__init__(container, img_array)
-        self.img_array_copy = self.img_array.copy()
+        # self.img_array_copy = self.img_array.copy()
         self.img_label.bind("<Button-1>", self.draw_cross)
         self.create_widgets()
 
@@ -78,17 +81,17 @@ class AddPCBHole(ImageInitializer):
 
     def draw_cross(self, event):
             line_thickness = 2
-            cv2.line(self.img_array_copy, (event.x - 15, event.y), (event.x + 15, event.y), (0,0,255), thickness=line_thickness)
-            cv2.line(self.img_array_copy, (event.x, event.y - 15), (event.x, event.y + 15), (0,0,255), thickness=line_thickness)
+            cv2.line(self.img_array, (event.x - 15, event.y), (event.x + 15, event.y), (0,0,255), thickness=line_thickness)
+            cv2.line(self.img_array, (event.x, event.y - 15), (event.x, event.y + 15), (0,0,255), thickness=line_thickness)
             self.img_label.destroy()
             self.coords.append((event.x, event.y))
-            self.render_img(self.img_array_copy, self.draw_cross)
+            self.render_img(self.img_array, self.draw_cross)
             print(self.coords)
 
     def return_main(self):
         for widget in self.container.winfo_children():
             widget.destroy()
-        frame = ControlFrame(self.container, self.img_array_copy)
+        frame = ControlFrame(self.container, self.coords)
         frame.tkraise()
 
 class App(tk.Tk):
@@ -112,12 +115,9 @@ class App(tk.Tk):
         frame.tkraise()
 
 if __name__ == "__main__":
-    # PCB Image
-    img = Image.open("gui/12000001_temp.jpg")
-    # image for opencv
-    img_array = np.asarray(img)
+    coords = [(100,100), (320,300)]
     app = App()
-    ControlFrame(app, img_array)
+    ControlFrame(app, coords)
     app.mainloop()
 
 
