@@ -97,8 +97,8 @@ class AddPCBHole(ImageInitializer):
 class MovePCBHole(ImageInitializer):
     def __init__(self, container, coords):
         super().__init__(container, coords)
-        self.holes = { f'Barreno {i}':coord for i, coord in enumerate(coords)}
-        self.langs_var = tk.StringVar(value=[hole_num for hole_num in self.holes.keys()])
+        self.holes = { (i,):coord for i, coord in enumerate(coords)}
+        self.langs_var = tk.StringVar(value=[f"Barreno {i}" for i in len(self.holes)])
         self.create_widgets()
 
     def create_widgets(self):
@@ -118,17 +118,18 @@ class MovePCBHole(ImageInitializer):
         self.return_button.configure(command=self.return_main)
 
     def move_selected(self, event):
-        self.insert_cursor()
-        # get selected indices
-        selected_hole = self.listbox.curselection()
-        self.label = ttk.Label(self.master, text=selected_hole)
+        # get pin hole
+        self.selected_hole_name = self.listbox.curselection()
+        self.posx, self.posy = self.holes[self.selected_hole_name]
+        self.insert_cursor(self.posx, self.posy)
+        self.label = ttk.Label(self.master, text=self.selected_hole_name)
         self.label.place(x = 700, y = 130)
 
-    def insert_cursor(self):
+    def insert_cursor(self, px, py):
         # button
         self.up = ttk.Button(self.container, text='up')
         self.up.place(x = 700, y = 200)
-        # self.up.configure(command=self.press_add)
+        self.up.configure(command=self.move_pin_hole("up", px, py))
         # button
         self.down = ttk.Button(self.container, text='down')
         self.down.place(x = 700, y = 240)
@@ -141,6 +142,14 @@ class MovePCBHole(ImageInitializer):
         self.right = ttk.Button(self.container, text='right')
         self.right.place(x = 700, y = 320)
         # self.right.configure(command=self.press_add)
+    
+    def move_pin_hole(self,direction, x, y):
+        if direction == "up":
+            y += 20
+        
+        cv2.circle(img=self.img_array, center = (x, y),
+                   radius=5, color =(255,255,0), thickness=-1)
+        self.render_img(self.img_array)
 
 
     def return_main(self):
