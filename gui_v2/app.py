@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from tkinter.messagebox import showerror
+from functools import partial
 from PIL import Image, ImageTk
 import cv2
 import numpy as np
@@ -98,8 +98,10 @@ class MovePCBHole(ImageInitializer):
     def __init__(self, container, coords):
         super().__init__(container, coords)
         self.holes = { (i,):coord for i, coord in enumerate(coords)}
-        self.langs_var = tk.StringVar(value=[f"Barreno {i}" for i in len(self.holes)])
+        self.langs_var = tk.StringVar(value=[f"Barreno {i}" for i in range(len(self.holes.keys()))])
+        self.posx, self.posy = None, None
         self.create_widgets()
+        self.insert_cursor()
 
     def create_widgets(self):
         self.label = ttk.Label(self.master, text='This is the move frame')
@@ -121,36 +123,43 @@ class MovePCBHole(ImageInitializer):
         # get pin hole
         self.selected_hole_name = self.listbox.curselection()
         self.posx, self.posy = self.holes[self.selected_hole_name]
-        self.insert_cursor(self.posx, self.posy)
-        self.label = ttk.Label(self.master, text=self.selected_hole_name)
-        self.label.place(x = 700, y = 130)
+        self.holes.pop(self.selected_hole_name)    
 
-    def insert_cursor(self, px, py):
-        # button
-        self.up = ttk.Button(self.container, text='up')
-        self.up.place(x = 700, y = 200)
-        self.up.configure(command=self.move_pin_hole("up", px, py))
-        # button
-        self.down = ttk.Button(self.container, text='down')
-        self.down.place(x = 700, y = 240)
-        # self.down.configure(command=self.press_add)
-        # button
-        self.left = ttk.Button(self.container, text='left')
-        self.left.place(x = 700, y = 280)
-        # self.left.configure(command=self.press_add)
-        # button
-        self.right = ttk.Button(self.container, text='right')
-        self.right.place(x = 700, y = 320)
-        # self.right.configure(command=self.press_add)
+    def insert_cursor(self):
+        # move methods
+        self.move_up = partial(self.move_pin_hole, "up")
+        self.move_down = partial(self.move_pin_hole, "down")
+        self.move_left = partial(self.move_pin_hole, "left")
+        self.move_right = partial(self.move_pin_hole, "right")
+        # buttons
+        self.button_up = ttk.Button(self.container, text='up', command=self.move_up)
+        self.button_up.place(x = 700, y = 200)
+
+        self.button_down = ttk.Button(self.container, text='down', command=self.move_down)
+        self.button_down.place(x = 700, y = 240)
+
+        self.button_left = ttk.Button(self.container, text='left', command=self.move_left)
+        self.button_left.place(x = 700, y = 280)
+
+        self.button_right = ttk.Button(self.container, text='right', command=self.move_right)
+        self.button_right.place(x = 700, y = 320)
     
-    def move_pin_hole(self,direction, x, y):
+    def move_pin_hole(self, direction):
+        # remove actual circle
+        cv2.circle(img=self.img_array, center = (self.posx, self.posy),
+                   radius=5, color =(255,255,255), thickness=-1)
         if direction == "up":
-            y += 20
-        
-        cv2.circle(img=self.img_array, center = (x, y),
-                   radius=5, color =(255,255,0), thickness=-1)
+            self.posy -= 2
+        elif direction == "down":
+            self.posy += 2
+        elif direction == "left":
+            self.posx -= 2
+        elif direction == "right":
+            self.posx += 2
+        # new coordinate and overwrite all the pin-holes coords
+        self.holes["new"] = (self.posx, self.posy)
+        self.coords = list(self.holes.values())
         self.render_img(self.img_array)
-
 
     def return_main(self):
         for widget in self.container.winfo_children():
