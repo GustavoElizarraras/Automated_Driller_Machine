@@ -15,16 +15,24 @@ class ImageInitializer(ttk.Frame):
         self.img_array = np.asarray(self.img)
         # List of coordinates (dummy for now)
         self.coords = coords
-        self.render_img(self.img_array)
+        self.show_green_holes()
     
     def render_img(self, img_array, binding=None):
-        for c in self.coords:
-            cv2.circle(img=img_array, center = (c[0], c[1]),
-                       radius=5, color =(0,255,0), thickness=-1)
         self.render = ImageTk.PhotoImage(Image.fromarray(img_array))
         self.img_label = ttk.Label(self.container, image=self.render, cursor="cross")
         self.img_label.place(x = 0, y = 0)
         self.img_label.bind("<Button-1>", binding)
+
+    def show_green_holes(self):
+        for c in self.coords:
+            cv2.circle(img=self.img_array, center = (c[0], c[1]),
+                       radius=5, color=(0,255,0), thickness=-1)
+        self.render_img(self.img_array)
+
+    def colour_selected(self, x, y, color):
+        cv2.circle(img=self.img_array, center = (x,y),
+                   radius=5, color=color, thickness=-1)
+        self.render_img(self.img_array)
 
 class ControlFrame(ImageInitializer):
     def __init__(self, container, coords):
@@ -41,7 +49,7 @@ class ControlFrame(ImageInitializer):
         # button
         self.del_button = ttk.Button(self.container, text='Eliminar barreno')
         self.del_button.place(x = 700, y = 50)
-        # self.convert_button.configure(command=self.convert)
+        self.del_button.configure(command=self.press_delete)
 
         # button
         self.move_button = ttk.Button(self.container, text='Mover barreno')
@@ -62,8 +70,10 @@ class ControlFrame(ImageInitializer):
         frame = MovePCBHole(self.container, self.coords)
         frame.tkraise()
 
-#     def press_del(self):
-#         pass
+    def press_delete(self):
+        self.clear_frame()
+        frame = DeletePCBHole(self.container, self.coords)
+        frame.tkraise()
 
 class AddPCBHole(ImageInitializer):
     def __init__(self, container, coords):
@@ -100,6 +110,7 @@ class MovePCBHole(ImageInitializer):
         self.holes = { (i,):coord for i, coord in enumerate(coords)}
         self.langs_var = tk.StringVar(value=[f"Barreno {i}" for i in range(len(self.holes.keys()))])
         self.posx, self.posy = None, None
+        self.selected_hole_name = None
         self.create_widgets()
         self.insert_cursor()
 
@@ -123,7 +134,7 @@ class MovePCBHole(ImageInitializer):
         # get pin hole
         self.selected_hole_name = self.listbox.curselection()
         self.posx, self.posy = self.holes[self.selected_hole_name]
-        self.holes.pop(self.selected_hole_name)    
+        self.holes.pop(self.selected_hole_name)
 
     def insert_cursor(self):
         # move methods
@@ -157,10 +168,60 @@ class MovePCBHole(ImageInitializer):
         elif direction == "right":
             self.posx += 2
         # new coordinate and overwrite all the pin-holes coords
-        self.holes["new"] = (self.posx, self.posy)
+        self.holes[self.selected_hole_name] = (self.posx, self.posy)
         self.coords = list(self.holes.values())
         self.render_img(self.img_array)
 
+    def return_main(self):
+        for widget in self.container.winfo_children():
+            widget.destroy()
+        frame = ControlFrame(self.container, self.coords)
+        frame.tkraise()
+
+class DeletePCBHole(ImageInitializer):
+    def __init__(self, container, coords):
+        super().__init__(container, coords)
+        self.selected_hole_name = None
+        self.create_listbox()
+
+    def create_widgets(self):
+        self.label = ttk.Label(self.master, text='This is the move frame')
+        self.label.place(x = 700, y = 10)
+
+        # button
+        self.delete_button = ttk.Button(self.container, text='Eliminar')
+        self.delete_button.place(x = 700, y = 140)
+        self.delete_button.configure(command=self.delete_selected)
+
+        # button
+        self.return_button = ttk.Button(self.container, text='Volver')
+        self.return_button.place(x = 700, y = 200)
+        self.return_button.configure(command=self.return_main)
+
+    def select(self, event):
+        # get pin hole
+        self.selected_hole_name = self.listbox.curselection()
+        self.posx, self.posy = self.holes[self.selected_hole_name]
+        self.show_green_holes()
+        self.colour_selected(self.posx, self.posy, (255,0,255))
+
+    def delete_selected(self):
+        self.colour_selected(self.posx, self.posy, (255,255,255))
+        self.holes.pop(self.selected_hole_name)
+        self.coords = list(self.holes.values())
+        self.create_listbox() 
+
+    def create_listbox(self):
+        self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
+        self.langs_var = tk.StringVar(value=[f"Barreno {i}" for i in range(len(self.holes.keys()))])
+        self.listbox = tk.Listbox(
+            self.container,
+            listvariable=self.langs_var,
+            height=6)
+        self.listbox.place(x = 700, y = 90)
+        self.listbox.bind('<<ListboxSelect>>', self.select)
+        self.create_widgets()
+    
     def return_main(self):
         for widget in self.container.winfo_children():
             widget.destroy()
@@ -184,5 +245,3 @@ if __name__ == "__main__":
     app = App()
     ControlFrame(app, coords)
     app.mainloop()
-
-
