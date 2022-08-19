@@ -29,7 +29,7 @@ def cv2_ascii(font, font_size, thick, coords):
     mask = cv2.bitwise_not(cv2.merge((mask, mask, mask)))
     return mask
 
-def pdi_pipeline(img_path):
+def pdi_pipeline(img_save_path):
     # random type of font
     font_combination = generate_random_font_type()
     font = font_combination["font"]
@@ -40,35 +40,32 @@ def pdi_pipeline(img_path):
     x_start, y_start = 5, 5
     rotations = [None, cv2.ROTATE_90_CLOCKWISE, 
                        cv2.ROTATE_90_COUNTERCLOCKWISE, cv2.ROTATE_180]
-    try:
-        for k, rotation in enumerate(rotations):
+
+    img_path = os.getcwd() + "/dataset/edited_images"
+    for root, dir, files in os.walk(img_path):
+        for img in files:
+            rot = random.randint(0,3)
             # reading images
-            pcb = cv2.imread(img_path)
-            new_name = img_path[:-4] + str(k) + img_path[-4:]
+            pcb = cv2.imread(root + "/" + img)
             for j in range(21):
                 for i in range (21):
                     sub_image = cv2.bitwise_not(pcb[x_start:x_start + 30, y_start:y_start + 30, :]) / 255
                     blackness = np.sum(sub_image)
+                    n = random.randint(0,1)
                     if blackness < 90:
                         ascii_mask = cv2_ascii(font, font_size, thick, coords)
-                        if rotation is not None:
-                            ascii_mask = cv2.rotate(ascii_mask, rotation)
-                        pcb[x_start:x_start + 30, y_start:y_start + 30, :] = ascii_mask
+                        if n == 1:
+                            ascii_mask = cv2.rotate(ascii_mask, rotations[rot])
+                            pcb[x_start:x_start + 30, y_start:y_start + 30, :] = ascii_mask
                     x_start += 30
                     if i == 20:
                         x_start = 5
                 y_start += 30
                 if j == 20:
                     y_start = 5
-                    cv2.imwrite(new_name, pcb)
-    except Exception as e:
-        print(img_path, e)
+                    cv2.imwrite(img_save_path + "/" + img[3:], pcb)
 
 if __name__ == "__main__":
 
-    images_path = os.getcwd() + "/dataset/hand_picked"
-    for root, dir, files in os.walk(images_path):
-        for image in files:
-            # reading image
-            complete_path = root + "/" + image
-            pdi_pipeline(complete_path)
+    save_path = os.getcwd() + "/dataset/edited_wtypos"
+    pdi_pipeline(save_path)
