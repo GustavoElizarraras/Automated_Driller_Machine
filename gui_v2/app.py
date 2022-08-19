@@ -4,19 +4,22 @@ from functools import partial
 from PIL import Image, ImageTk
 import cv2
 import numpy as np
+import os
+import csv
 
 class ImageInitializer(ttk.Frame):
-    def __init__(self, container, coords):
+    def __init__(self, container, img_path, coords):
         super().__init__(container)
         self.container = container
+        self.img_path = img_path
         # PCB Image
-        self.img = Image.open("gui/12000001_temp.jpg")
+        self.img = Image.open(self.img_path)
         # image for opencv
         self.img_array = np.asarray(self.img)
         # List of coordinates (dummy for now)
         self.coords = coords
         self.show_green_holes()
-    
+
     def render_img(self, img_array, binding=None):
         self.render = ImageTk.PhotoImage(Image.fromarray(img_array))
         self.img_label = ttk.Label(self.container, image=self.render, cursor="cross")
@@ -56,6 +59,11 @@ class ControlFrame(ImageInitializer):
         self.move_button.place(x = 700, y = 90)
         self.move_button.configure(command=self.press_move)
 
+        # button
+        self.save_button = ttk.Button(self.container, text='Guardar')
+        self.save_button.place(x = 700, y = 130)
+        self.save_button.configure(command=self.save_coords)
+
     def clear_frame(self):
         for widget in self.container.winfo_children():
             widget.destroy()
@@ -74,6 +82,12 @@ class ControlFrame(ImageInitializer):
         self.clear_frame()
         frame = DeletePCBHole(self.container, self.coords)
         frame.tkraise()
+
+    def save_coords(self):
+        with open("dataset/processed_locations/scrapped.csv", "a") as file:
+            coords_writer = csv.writer(file)
+            coords_writer.writerow(self.)
+
 
 class AddPCBHole(ImageInitializer):
     def __init__(self, container, coords):
@@ -154,7 +168,7 @@ class MovePCBHole(ImageInitializer):
 
         self.button_right = ttk.Button(self.container, text='right', command=self.move_right)
         self.button_right.place(x = 700, y = 320)
-    
+
     def move_pin_hole(self, direction):
         # remove actual circle
         cv2.circle(img=self.img_array, center = (self.posx, self.posy),
@@ -209,7 +223,7 @@ class DeletePCBHole(ImageInitializer):
         self.colour_selected(self.posx, self.posy, (255,255,255))
         self.holes.pop(self.selected_hole_name)
         self.coords = list(self.holes.values())
-        self.create_listbox() 
+        self.create_listbox()
 
     def create_listbox(self):
         self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
@@ -221,12 +235,21 @@ class DeletePCBHole(ImageInitializer):
         self.listbox.place(x = 700, y = 90)
         self.listbox.bind('<<ListboxSelect>>', self.select)
         self.create_widgets()
-    
+
     def return_main(self):
         for widget in self.container.winfo_children():
             widget.destroy()
         frame = ControlFrame(self.container, self.coords)
         frame.tkraise()
+
+class BetterLabeling():
+    def __init__(self, directory, pattern=None):
+        self.directory = directory
+        self.image_iterator = next(os.walk(self.directory))
+
+    def next_image(self):
+        self.image_iterator = next(self.image_iterator)
+        return self.image_iterator
 
 class App(tk.Tk):
     def __init__(self):
