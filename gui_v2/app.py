@@ -8,14 +8,14 @@ import os
 import csv
 
 class ImageInitializer(ttk.Frame):
-    def __init__(self, container, img_path, coords):
+    def __init__(self, container, coords):
         super().__init__(container)
         self.container = container
-        self.img_path = img_path
+        self.img_path = os.getcwd() + "/dataset/pcb_gimp_morph/c1_0.jpg"
         # PCB Image
         self.img = Image.open(self.img_path)
         # image for opencv
-        self.img_array = np.asarray(self.img)
+        self.img_array = cv2.merge([np.asarray(self.img), np.asarray(self.img), np.asarray(self.img)])
         # List of coordinates (dummy for now)
         self.coords = coords
         self.show_green_holes()
@@ -28,13 +28,17 @@ class ImageInitializer(ttk.Frame):
 
     def show_green_holes(self):
         for c in self.coords:
-            cv2.circle(img=self.img_array, center = (c[0], c[1]),
-                       radius=5, color=(0,255,0), thickness=-1)
+            center = c[0]
+            radius = c[1]
+            color = (0,255,0)
+            if radius == 2:
+                color = (0,0,255)
+            cv2.circle(self.img_array, center, radius, color, 4)
         self.render_img(self.img_array)
 
-    def colour_selected(self, x, y, color):
-        cv2.circle(img=self.img_array, center = (x,y),
-                   radius=5, color=color, thickness=-1)
+    def colour_selected(self, center, color, radius=5):
+        cv2.circle(img=self.img_array, center=center,
+                   radius=radius, color=color, thickness=4)
         self.render_img(self.img_array)
 
 class ControlFrame(ImageInitializer):
@@ -84,9 +88,19 @@ class ControlFrame(ImageInitializer):
         frame.tkraise()
 
     def save_coords(self):
-        with open("dataset/processed_locations/scrapped.csv", "a") as file:
+        locations = [self.img_path[82:]]
+        for c in self.coords:
+            a, b = c[0]
+            r = c[1]
+            x1, x2 = str(a - r), str(a + r)
+            y1, y2 = str(b + r), str(b - r)
+            locations.append(x1)
+            locations.append(y1)
+            locations.append(x2)
+            locations.append(y2)
+        with open("dataset/processed_locations/scrapped_better.csv", "a") as file:
             coords_writer = csv.writer(file)
-            coords_writer.writerow(self.)
+            coords_writer.writerow(locations)
 
 
 class AddPCBHole(ImageInitializer):
@@ -109,7 +123,7 @@ class AddPCBHole(ImageInitializer):
             cv2.line(self.img_array, (event.x - 15, event.y), (event.x + 15, event.y), (0,0,255), thickness=line_thickness)
             cv2.line(self.img_array, (event.x, event.y - 15), (event.x, event.y + 15), (0,0,255), thickness=line_thickness)
             self.img_label.destroy()
-            self.coords.append((event.x, event.y))
+            self.coords.append(((event.x, event.y), 10))
             self.render_img(self.img_array, self.draw_cross)
 
     def return_main(self):
@@ -147,8 +161,11 @@ class MovePCBHole(ImageInitializer):
     def move_selected(self, event):
         # get pin hole
         self.selected_hole_name = self.listbox.curselection()
-        self.posx, self.posy = self.holes[self.selected_hole_name]
-        self.holes.pop(self.selected_hole_name)
+        self.posx, self.posy = self.holes[self.selected_hole_name][0]
+        self.radius = self.holes[self.selected_hole_name][1]
+        self.show_green_holes()
+        self.colour_selected((self.posx, self.posy), (255,227,51), self.radius)
+        #self.holes.pop(self.selected_hole_name)
 
     def insert_cursor(self):
         # move methods
@@ -172,7 +189,7 @@ class MovePCBHole(ImageInitializer):
     def move_pin_hole(self, direction):
         # remove actual circle
         cv2.circle(img=self.img_array, center = (self.posx, self.posy),
-                   radius=5, color =(255,255,255), thickness=-1)
+                   radius=3, color =(255,27,51), thickness=-1)
         if direction == "up":
             self.posy -= 2
         elif direction == "down":
@@ -182,7 +199,7 @@ class MovePCBHole(ImageInitializer):
         elif direction == "right":
             self.posx += 2
         # new coordinate and overwrite all the pin-holes coords
-        self.holes[self.selected_hole_name] = (self.posx, self.posy)
+        self.holes[self.selected_hole_name] = ((self.posx, self.posy), self.radius)
         self.coords = list(self.holes.values())
         self.render_img(self.img_array)
 
@@ -199,28 +216,29 @@ class DeletePCBHole(ImageInitializer):
         self.create_listbox()
 
     def create_widgets(self):
-        self.label = ttk.Label(self.master, text='This is the move frame')
+        self.label = ttk.Label(self.master, text='This is the delete frame')
         self.label.place(x = 700, y = 10)
 
         # button
         self.delete_button = ttk.Button(self.container, text='Eliminar')
-        self.delete_button.place(x = 700, y = 140)
+        self.delete_button.place(x = 700, y = 300)
         self.delete_button.configure(command=self.delete_selected)
 
         # button
         self.return_button = ttk.Button(self.container, text='Volver')
-        self.return_button.place(x = 700, y = 200)
+        self.return_button.place(x = 700, y = 350)
         self.return_button.configure(command=self.return_main)
 
     def select(self, event):
         # get pin hole
         self.selected_hole_name = self.listbox.curselection()
-        self.posx, self.posy = self.holes[self.selected_hole_name]
+        self.center = self.holes[self.selected_hole_name][0]
+        self.radius = self.holes[self.selected_hole_name][1]
         self.show_green_holes()
-        self.colour_selected(self.posx, self.posy, (255,0,255))
+        self.colour_selected(self.center, (255,0,255), self.radius)
 
     def delete_selected(self):
-        self.colour_selected(self.posx, self.posy, (255,255,255))
+        self.colour_selected(self.center, (255,255,255), self.radius)
         self.holes.pop(self.selected_hole_name)
         self.coords = list(self.holes.values())
         self.create_listbox()
@@ -242,14 +260,19 @@ class DeletePCBHole(ImageInitializer):
         frame = ControlFrame(self.container, self.coords)
         frame.tkraise()
 
-class BetterLabeling():
-    def __init__(self, directory, pattern=None):
-        self.directory = directory
-        self.image_iterator = next(os.walk(self.directory))
+class ParseCoords():
+    def __init__(self, coords):
+        self.coords = coords
+        self.coords_processed = []
+        self.get_img_coords()
 
-    def next_image(self):
-        self.image_iterator = next(self.image_iterator)
-        return self.image_iterator
+    def get_img_coords(self):
+        for i in range(0, len(self.coords), 4):
+            x1, y1 = int(self.coords[i]), int(self.coords[i+1])
+            x2, y2 = int(self.coords[i+2]), int(self.coords[i+3])
+            half_x = (x2-x1) // 2
+            half_y = (y1-y2) // 2
+            self.coords_processed.append(((x1 + half_x, y1 - half_y), int((y1-y2)/2)))
 
 class App(tk.Tk):
     def __init__(self):
@@ -264,7 +287,9 @@ class App(tk.Tk):
         frame.tkraise()
 
 if __name__ == "__main__":
-    coords = [(100,100), (320,300)]
+    coords = ParseCoords([
+      38,428,58,408,132,347,148,331,273,490,289,474,38,477,58,457,447,384,463,368,148,202,164,186,370,490,386,474,444,173,464,153,56,59,70,45,161,542,175,528,315,199,333,181,147,252,163,236,448,519,462,505,623,60,637,46,301,126,321,106,205,59,219,45,574,176,594,156,54,258,70,242,322,489,336,475,133,137,153,117,568,150,588,130,315,323,335,303,1,169,17,153,621,255,637,239,500,256,514,242,501,58,515,44,558,468,576,450,401,59,413,47,297,16,309,4,537,332,555,314,20,496,38,478,253,304,267,290,316,396,326,386,610,197,620,187,296,63,316,43
+      ])
     app = App()
-    ControlFrame(app, coords)
+    ControlFrame(app, coords.coords_processed)
     app.mainloop()
