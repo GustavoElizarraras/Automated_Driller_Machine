@@ -11,13 +11,18 @@ class ImageInitializer(ttk.Frame):
     def __init__(self, container, coords):
         super().__init__(container)
         self.container = container
-        self.img_path = os.getcwd() + "/dataset/pcb_gimp_morph/c1_0.jpg"
+
+        # TODO: Get the last image name from a folder
+
+        self.img_path = os.getcwd() + "/dataset/pcb_gimp_morph/c32_3.jpg"
         # PCB Image
         self.img = Image.open(self.img_path)
         # image for opencv
         self.img_array = cv2.merge([np.asarray(self.img), np.asarray(self.img), np.asarray(self.img)])
         # List of coordinates (dummy for now)
         self.coords = coords
+        # pin-holes identifiers
+        self.holes = { (i,):coord for i, coord in enumerate(coords)}
         self.show_green_holes()
 
     def render_img(self, img_array, binding=None):
@@ -34,12 +39,18 @@ class ImageInitializer(ttk.Frame):
             if radius == 2:
                 color = (0,0,255)
             cv2.circle(self.img_array, center, radius, color, 4)
+        self.draw_hole_number()
         self.render_img(self.img_array)
 
     def colour_selected(self, center, color, radius=5):
         cv2.circle(img=self.img_array, center=center,
                    radius=radius, color=color, thickness=4)
         self.render_img(self.img_array)
+
+    def draw_hole_number(self):
+        for num, coord in self.holes.items():
+            cv2.putText(self.img_array, f"B{num[0]}", (coord[0][0]-10, coord[0][1]-11), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,135,160), 2)
+
 
 class ControlFrame(ImageInitializer):
     def __init__(self, container, coords):
@@ -123,7 +134,7 @@ class AddPCBHole(ImageInitializer):
             cv2.line(self.img_array, (event.x - 15, event.y), (event.x + 15, event.y), (0,0,255), thickness=line_thickness)
             cv2.line(self.img_array, (event.x, event.y - 15), (event.x, event.y + 15), (0,0,255), thickness=line_thickness)
             self.img_label.destroy()
-            self.coords.append(((event.x, event.y), 10))
+            self.coords.append(((event.x, event.y), 11))
             self.render_img(self.img_array, self.draw_cross)
 
     def return_main(self):
@@ -135,7 +146,6 @@ class AddPCBHole(ImageInitializer):
 class MovePCBHole(ImageInitializer):
     def __init__(self, container, coords):
         super().__init__(container, coords)
-        self.holes = { (i,):coord for i, coord in enumerate(coords)}
         self.langs_var = tk.StringVar(value=[f"Barreno {i}" for i in range(len(self.holes.keys()))])
         self.posx, self.posy = None, None
         self.selected_hole_name = None
@@ -189,15 +199,15 @@ class MovePCBHole(ImageInitializer):
     def move_pin_hole(self, direction):
         # remove actual circle
         cv2.circle(img=self.img_array, center = (self.posx, self.posy),
-                   radius=3, color =(255,27,51), thickness=-1)
+                   radius=1, color =(255,27,51), thickness=-1)
         if direction == "up":
-            self.posy -= 2
+            self.posy -= 1
         elif direction == "down":
-            self.posy += 2
+            self.posy += 1
         elif direction == "left":
-            self.posx -= 2
+            self.posx -= 1
         elif direction == "right":
-            self.posx += 2
+            self.posx += 1
         # new coordinate and overwrite all the pin-holes coords
         self.holes[self.selected_hole_name] = ((self.posx, self.posy), self.radius)
         self.coords = list(self.holes.values())
@@ -244,7 +254,6 @@ class DeletePCBHole(ImageInitializer):
         self.create_listbox()
 
     def create_listbox(self):
-        self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
         self.langs_var = tk.StringVar(value=[f"Barreno {i}" for i in range(len(self.holes.keys()))])
         self.listbox = tk.Listbox(
             self.container,
@@ -287,9 +296,7 @@ class App(tk.Tk):
         frame.tkraise()
 
 if __name__ == "__main__":
-    coords = ParseCoords([
-      38,428,58,408,132,347,148,331,273,490,289,474,38,477,58,457,447,384,463,368,148,202,164,186,370,490,386,474,444,173,464,153,56,59,70,45,161,542,175,528,315,199,333,181,147,252,163,236,448,519,462,505,623,60,637,46,301,126,321,106,205,59,219,45,574,176,594,156,54,258,70,242,322,489,336,475,133,137,153,117,568,150,588,130,315,323,335,303,1,169,17,153,621,255,637,239,500,256,514,242,501,58,515,44,558,468,576,450,401,59,413,47,297,16,309,4,537,332,555,314,20,496,38,478,253,304,267,290,316,396,326,386,610,197,620,187,296,63,316,43
-      ])
+    coords = ParseCoords([])
     app = App()
     ControlFrame(app, coords.coords_processed)
     app.mainloop()
