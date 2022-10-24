@@ -41,11 +41,11 @@ def get_rotated_coords(row, angle):
     name = row[0]
     coords_list = row[1:]
     if angle == 180:
-        name = name[:-6] + "_3.jpg"
+        name = name[:-4] + "_3.jpg"
     elif angle == 90:
-        name = name[:-6] + "_2.jpg"
+        name = name[:-4] + "_2.jpg"
     elif angle == 270:
-        name = name[:-6] + "_1.jpg"
+        name = name[:-4] + "_1.jpg"
 
     stacked_coords = [name]
 
@@ -112,21 +112,7 @@ def rotate_box(corners, angle):
 
     return calculated
 
-
-    return calculated
-
-def show_green_holes(coords):
-    pcb = cv2.imread(os.getcwd() + "/dataset/pcb_gimp_morph/c44_3.jpg")
-
-    for c in coords:
-        center = c[0]
-        radius = c[1]
-        color = (0,255,0)
-        cv2.circle(pcb, center, radius, color, 4)
-
-    return pcb
-
-with open("/Users/angel.elizarraras/MyStuff/Automated_Driller_Machine/dataset/processed_locations/dummy.csv", "r") as r:
+with open("dataset/processed_locations/hand_picked_better.csv", "r") as r:
     reader = csv.reader(r)
     for row in reader:
         for angle in [90,270,180]:

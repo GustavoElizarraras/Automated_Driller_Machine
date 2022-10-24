@@ -14,13 +14,13 @@ class ImageInitializer(ttk.Frame):
 
         # TODO: Get the last image name from a folder
 
-        self.img_path = os.getcwd() + "/dataset/useful_handpicked/90100076_temp.jpg"
+        self.img_path = os.getcwd() + "/dataset/useful_handpicked_rot/90100076_temp_3.jpg"
         # PCB Image
 
         self.img = Image.open(self.img_path)
         # image for opencv
-        #self.img_array = cv2.merge([np.asarray(self.img), np.asarray(self.img), np.asarray(self.img)])
-        self.img_array = np.asarray(self.img)
+        self.img_array = cv2.merge([np.asarray(self.img), np.asarray(self.img), np.asarray(self.img)])
+        #self.img_array = np.asarray(self.img)
         # List of coordinates (dummy for now)
         self.coords = coords
         # pin-holes identifiers
@@ -283,7 +283,7 @@ class ParseCoords():
             x2, y2 = int(self.coords[i+2]), int(self.coords[i+3])
             half_x = (x2-x1) // 2
             half_y = (y1-y2) // 2
-            self.coords_processed.append(((x1 + half_x, y1 - half_y), int((y1-y2)/2)))
+            self.coords_processed.append(((x1 + half_x, y1 - half_y), abs(int((y1-y2)/2))))
 
 class App(tk.Tk):
     def __init__(self):
@@ -298,7 +298,7 @@ class App(tk.Tk):
         frame.tkraise()
 
 if __name__ == "__main__":
-    coords = ParseCoords([])
+    coords = ParseCoords([35,605,17,623,66,583,48,601,153,604,135,621,53,552,35,570,53,512,35,530,145,536,127,554,157,505,139,524,64,451,46,469,35,427,17,445,71,191,53,209,96,168,78,186,145,102,127,120,478,237,460,255,423,581,405,599])
     app = App()
     ControlFrame(app, coords.coords_processed)
     app.mainloop()
