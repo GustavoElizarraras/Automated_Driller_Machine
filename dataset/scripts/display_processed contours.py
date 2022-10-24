@@ -9,12 +9,12 @@ import time
 grosor=1
 fuente=cv2.FONT_HERSHEY_COMPLEX
 
-gimp_path = os.getcwd() + "/dataset/pcb_gimp_morph"
+gimp_path = os.getcwd() + "/dataset/edited_wtypos"
 
-with open("dataset/scrapped_locations.csv", "r") as file:
+with open("dataset/original_locations.csv", "r") as file:
     reader = csv.reader(file)
     for row in reader:
-        img =  os.getcwd() + "/dataset/pcb_gimp_morph/" + row[0]
+        img =  os.getcwd() + "/dataset/edited_wtypos/" + row[0]
         pcb = cv2.imread(img)
         #centers = []
         for i in range(1, len(row), 4):
@@ -26,7 +26,7 @@ with open("dataset/scrapped_locations.csv", "r") as file:
 
             cv2.circle(pcb, (x1 + half_x, y1 - half_y), int((y1-y2)/2), (0, 255, 0), 2)
 
-        cv2.imshow("img", pcb)
+        cv2.imshow(img, pcb)
         cv2.waitKey(0)
         #print(row)
 

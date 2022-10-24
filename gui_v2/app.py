@@ -14,11 +14,13 @@ class ImageInitializer(ttk.Frame):
 
         # TODO: Get the last image name from a folder
 
-        self.img_path = os.getcwd() + "/dataset/pcb_gimp_morph/c32_3.jpg"
+        self.img_path = os.getcwd() + "/dataset/useful_handpicked/90100076_temp.jpg"
         # PCB Image
+
         self.img = Image.open(self.img_path)
         # image for opencv
-        self.img_array = cv2.merge([np.asarray(self.img), np.asarray(self.img), np.asarray(self.img)])
+        #self.img_array = cv2.merge([np.asarray(self.img), np.asarray(self.img), np.asarray(self.img)])
+        self.img_array = np.asarray(self.img)
         # List of coordinates (dummy for now)
         self.coords = coords
         # pin-holes identifiers
@@ -99,7 +101,7 @@ class ControlFrame(ImageInitializer):
         frame.tkraise()
 
     def save_coords(self):
-        locations = [self.img_path[82:]]
+        locations = [self.img_path[85:]]
         for c in self.coords:
             a, b = c[0]
             r = c[1]
@@ -109,7 +111,7 @@ class ControlFrame(ImageInitializer):
             locations.append(y1)
             locations.append(x2)
             locations.append(y2)
-        with open("dataset/processed_locations/scrapped_better.csv", "a") as file:
+        with open("dataset/processed_locations/hand_picked_better.csv", "a") as file:
             coords_writer = csv.writer(file)
             coords_writer.writerow(locations)
 
@@ -134,7 +136,7 @@ class AddPCBHole(ImageInitializer):
             cv2.line(self.img_array, (event.x - 15, event.y), (event.x + 15, event.y), (0,0,255), thickness=line_thickness)
             cv2.line(self.img_array, (event.x, event.y - 15), (event.x, event.y + 15), (0,0,255), thickness=line_thickness)
             self.img_label.destroy()
-            self.coords.append(((event.x, event.y), 11))
+            self.coords.append(((event.x, event.y), 9))
             self.render_img(self.img_array, self.draw_cross)
 
     def return_main(self):
