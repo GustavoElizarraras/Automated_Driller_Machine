@@ -1,22 +1,53 @@
+from picamera import PiCamera
 import tkinter as tk
 from tkinter import ttk
 from functools import partial
 from PIL import Image, ImageTk
-import cv2
 import numpy as np
+import cv2
 import os
 import csv
+import glob
+import time
+import re
 
+class PiCameraPhoto():
+    def __init__(self, dir):
+        self.camera = PiCamera()
+        self.camera.resolution = (640,640)
+        self.dir = dir
+        last_img_path = self.get_last_file_dir()
+        img_name = self.get_img_name(last_img_path)
+        self.take_photo(last_img_path, img_name)
+
+    def take_photo(self, img_name):
+        self.camera.start_preview()
+        # Camera warm-up time
+        time.sleep(2)
+        self.camera.capture(self.dir + img_name)
+
+    def get_last_file_dir(self):
+        list_of_files = glob.glob(self.dir + "*")
+        latest_file = max(list_of_files, key=os.path.getctime)
+        return latest_file
+
+    def get_img_name(self, img_path_name):
+        last_img = img_path_name[:-11]
+        last_img_num = re.findall(r'\d+', last_img)
+        img_name = "img_" + str(last_img_num[-1] + 1) + ".jpg"
+        return img_name
 class ImageInitializer(ttk.Frame):
     def __init__(self, container, coords):
         super().__init__(container)
         self.container = container
 
-        # TODO: Get the last image name from a folder
+        #self.dir = "/Documents/img_test/"
+        #self.img_path = self.get_last_img_dir()
 
+        # Hardcoded path, to remove later
         self.img_path = os.getcwd() + "/dataset/useful_handpicked_rot/90100076_temp_3.jpg"
-        # PCB Image
 
+        # PCB Image
         self.img = Image.open(self.img_path)
         # image for opencv
         self.img_array = cv2.merge([np.asarray(self.img), np.asarray(self.img), np.asarray(self.img)])
@@ -26,6 +57,11 @@ class ImageInitializer(ttk.Frame):
         # pin-holes identifiers
         self.holes = { (i,):coord for i, coord in enumerate(coords)}
         self.show_green_holes()
+
+    def get_last_img_dir(self):
+        list_of_files = glob.glob(self.dir + "*.jpg")
+        latest_file = max(list_of_files, key=os.path.getctime)
+        return latest_file
 
     def render_img(self, img_array, binding=None):
         self.render = ImageTk.PhotoImage(Image.fromarray(img_array))
@@ -132,12 +168,12 @@ class AddPCBHole(ImageInitializer):
         self.return_button.configure(command=self.return_main)
 
     def draw_cross(self, event):
-            line_thickness = 2
-            cv2.line(self.img_array, (event.x - 15, event.y), (event.x + 15, event.y), (0,0,255), thickness=line_thickness)
-            cv2.line(self.img_array, (event.x, event.y - 15), (event.x, event.y + 15), (0,0,255), thickness=line_thickness)
-            self.img_label.destroy()
-            self.coords.append(((event.x, event.y), 9))
-            self.render_img(self.img_array, self.draw_cross)
+        line_thickness = 2
+        cv2.line(self.img_array, (event.x - 15, event.y), (event.x + 15, event.y), (0,0,255), thickness=line_thickness)
+        cv2.line(self.img_array, (event.x, event.y - 15), (event.x, event.y + 15), (0,0,255), thickness=line_thickness)
+        self.img_label.destroy()
+        self.coords.append(((event.x, event.y), 9))
+        self.render_img(self.img_array, self.draw_cross)
 
     def return_main(self):
         for widget in self.container.winfo_children():
