@@ -45,7 +45,7 @@ class ImageInitializer(ttk.Frame):
         #self.img_path = self.get_last_img_dir()
 
         # Hardcoded path, to remove later
-        self.img_path = os.getcwd() + "/dataset/useful_handpicked_rot/90100076_temp_3.jpg"
+        self.img_path = os.getcwd() + "/dataset/useful_handpicked_rot/12300111_temp_2.jpg"
 
         # PCB Image
         self.img = Image.open(self.img_path)
@@ -307,9 +307,11 @@ class DeletePCBHole(ImageInitializer):
         frame = ControlFrame(self.container, self.coords)
         frame.tkraise()
 
-class ParseCoords():
-    def __init__(self, coords):
-        self.coords = coords
+class ProcessPinHolesCenters():
+    def __init__(self, img, raw_coords):
+        self.img = img
+        self.image_bin_not = cv2.bitwise_not(self.img)
+        self.raw_coords = raw_coords
         self.coords_processed = []
         self.get_img_coords()
 
@@ -319,7 +321,37 @@ class ParseCoords():
             x2, y2 = int(self.coords[i+2]), int(self.coords[i+3])
             half_x = (x2-x1) // 2
             half_y = (y1-y2) // 2
+            # Big box to detect the center
+            x1 = x1 - half_x // 2
+            x2 = x2 + half_x // 2
+            y1 = y1 - half_y // 2
+            y2 = y2 + half_y // 2
             self.coords_processed.append(((x1 + half_x, y1 - half_y), abs(int((y1-y2)/2))))
+
+    def get_sub_image_center(self, x1, y1, x2, y2):
+        sub_image = self.image_bin_not[x1:x2, y1:y2]
+        detected_circles = cv2.HoughCircles(
+                                sub_image, 
+                                cv2.HOUGH_GRADIENT, 1, 20,
+                                param1 = 50,
+                                param2 = 5,
+                                minRadius = 2,
+                                maxRadius = 20
+                            )
+
+        for pt in detected_circles[0, :]:
+            # circle coords
+            a, b, r = int(pt[0]), int(pt[1]), int(pt[2])
+            # writing positions to a txt file
+            new_x1, new_x2 = str(a - r), str(a + r)
+            new_y1, new_y2 = str(b + r), str(b - r)
+            self.coords_processed.append(new_x1)
+            self.coords_processed.append(new_y1)
+            self.coords_processed.append(new_x2)
+            self.coords_processed.append(new_y2)
+            
+        return self.coords_processed
+
 
 class App(tk.Tk):
     def __init__(self):
