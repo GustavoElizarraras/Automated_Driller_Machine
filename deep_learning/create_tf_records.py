@@ -18,17 +18,9 @@ flags.DEFINE_string('csv_input', '', 'Path to the CSV input')
 flags.DEFINE_string('output_path', '', 'Path to output TFRecord')
 FLAGS = flags.FLAGS
 
-def correct_number_type(num):
-    if "-" in num:
-        return 0
-    if "." in num:
-        if "." == num[-2]:
-            num = num[:-2]
-    return int(num)
-
 def create_tf_example(image_row):
     filename = image_row[0] # Filename of the image. Empty if image is not from file
-    filename_path = "dataset/hand_picked/" + filename
+    filename_path = "dataset/all_good_images/" + filename
     filename = filename.encode('utf8')
     with tf.io.gfile.GFile(filename_path, "rb") as fid:
         encoded_jpg = fid.read()
@@ -43,8 +35,8 @@ def create_tf_example(image_row):
     ymaxs = [] # List of normalized bottom y coordinates in bounding box
                 # (1 per box)
 
-    
-    positions = [correct_number_type(s) for s in image_row[1:] if s != ""]
+
+    positions = [int(s) for s in image_row[1:] if s != ""]
 
     for i in range(0, len(positions), 4):
         xmins.append(positions[i] / width)
@@ -69,7 +61,7 @@ def create_tf_example(image_row):
 
 def main(_):
     # writer = tf.io.TFRecordWriter(FLAGS.output_path)
-    num_shards=10
+    num_shards=5
     # output_filebase='/path/to/train_dataset.record'
 
     with contextlib2.ExitStack() as tf_record_close_stack:
