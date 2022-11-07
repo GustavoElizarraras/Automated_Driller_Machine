@@ -310,48 +310,46 @@ class DeletePCBHole(ImageInitializer):
 class ProcessPinHolesCenters():
     def __init__(self, img, raw_coords):
         self.img = img
-        self.image_bin_not = cv2.bitwise_not(self.img)
+        self.one_channel, _, _ = cv2.split(self.img)
+        self.image_bin_not = cv2.bitwise_not(self.one_channel)
         self.raw_coords = raw_coords
         self.coords_processed = []
         self.get_img_coords()
 
     def get_img_coords(self):
-        for i in range(0, len(self.coords), 4):
-            x1, y1 = int(self.coords[i]), int(self.coords[i+1])
-            x2, y2 = int(self.coords[i+2]), int(self.coords[i+3])
+        for i in range(0, len(self.raw_coords), 4):
+            # IMPORTANT: It seems that the coords in the csv are in the following order: x2,y2,x1,y1
+            x2, y2 = int(self.raw_coords[i]), int(self.raw_coords[i+1])
+            x1, y1 = int(self.raw_coords[i+2]), int(self.raw_coords[i+3])
             half_x = (x2-x1) // 2
-            half_y = (y1-y2) // 2
+            half_y = (y2-y1) // 2
             # Big box to detect the center
-            x1 = x1 - half_x // 2
-            x2 = x2 + half_x // 2
-            y1 = y1 - half_y // 2
-            y2 = y2 + half_y // 2
-            self.coords_processed.append(((x1 + half_x, y1 - half_y), abs(int((y1-y2)/2))))
+            x1 = x1 - half_x if x1 - half_x > 0 else 0
+            x2 = x2 + half_x
+            y1 = y1 - half_y if y1 - half_y > 0 else 0
+            y2 = y2 + half_y
+            self.get_sub_image_center(x1,y1,x2,y2)
 
     def get_sub_image_center(self, x1, y1, x2, y2):
-        sub_image = self.image_bin_not[x1:x2, y1:y2]
+        print(x1,x2,y1,y2)
+        sub_image = self.image_bin_not[y1:y2, x1:x2]
+        #sub = self.img[y1:y2, x1:x2, :]
         detected_circles = cv2.HoughCircles(
-                                sub_image, 
-                                cv2.HOUGH_GRADIENT, 1, 20,
+                                sub_image,
+                                cv2.HOUGH_GRADIENT, 1, 40,
                                 param1 = 50,
-                                param2 = 5,
-                                minRadius = 2,
+                                param2 = 18,
+                                minRadius = 5,
                                 maxRadius = 20
                             )
 
         for pt in detected_circles[0, :]:
             # circle coords
             a, b, r = int(pt[0]), int(pt[1]), int(pt[2])
-            # writing positions to a txt file
-            new_x1, new_x2 = str(a - r), str(a + r)
-            new_y1, new_y2 = str(b + r), str(b - r)
+            new_x1 = x1 + a
+            new_y1 = y1 + b
             self.coords_processed.append(new_x1)
             self.coords_processed.append(new_y1)
-            self.coords_processed.append(new_x2)
-            self.coords_processed.append(new_y2)
-            
-        return self.coords_processed
-
 
 class App(tk.Tk):
     def __init__(self):
@@ -360,13 +358,8 @@ class App(tk.Tk):
         self.title('BARRENADORA AUTOMATIZADA')
         self.resizable(False, False)
 
-    def show_frame(self, page_name):
-        '''Show a frame for the given page name'''
-        frame = self.frames[page_name]
-        frame.tkraise()
-
 if __name__ == "__main__":
-    coords = ParseCoords([35,605,17,623,66,583,48,601,153,604,135,621,53,552,35,570,53,512,35,530,145,536,127,554,157,505,139,524,64,451,46,469,35,427,17,445,71,191,53,209,96,168,78,186,145,102,127,120,478,237,460,255,423,581,405,599])
+    coords = ProcessPinHolesCenters([35,605,17,623,66,583,48,601,153,604,135,621,53,552,35,570,53,512,35,530,145,536,127,554,157,505,139,524,64,451,46,469,35,427,17,445,71,191,53,209,96,168,78,186,145,102,127,120,478,237,460,255,423,581,405,599])
     app = App()
     ControlFrame(app, coords.coords_processed)
     app.mainloop()
