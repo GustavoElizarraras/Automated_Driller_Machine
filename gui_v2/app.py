@@ -73,14 +73,16 @@ class ImageInitializer(ttk.Frame):
         self.img_label.place(x = 0, y = 0)
         self.img_label.bind("<Button-1>", binding)
 
-    def show_green_holes(self):
+    def show_green_holes(self, binding=None):
         for coord in  self.coords:
             center = (coord[0], coord[1])
             radius = coord[2]
             color = (0,255,0)
             cv2.circle(self.img_array, center, radius, color, 3)
+            cv2.circle(self.img_array, center, 2, color, -1)
+        self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
         self.draw_hole_number()
-        self.render_img(self.img_array)
+        self.render_img(self.img_array, binding)
 
     def colour_selected(self, center, color, radius=5):
         cv2.circle(img=self.img_array, center=center,
@@ -110,7 +112,7 @@ class ControlFrame(ImageInitializer):
         self.del_button.configure(command=self.press_delete)
 
         # button
-        self.move_button = ttk.Button(self.container, text='Mover barreno')
+        self.move_button = ttk.Button(self.container, text='Añadir o Mover barreno')
         self.move_button.place(x = 700, y = 90)
         self.move_button.configure(command=self.press_move)
 
@@ -125,7 +127,7 @@ class ControlFrame(ImageInitializer):
 
     def press_move(self):
         self.clear_frame()
-        frame = MovePCBHole(self.container, self.coords)
+        frame = AddMovePCBHole(self.container, self.coords)
         frame.tkraise()
 
     def press_delete(self):
@@ -133,41 +135,13 @@ class ControlFrame(ImageInitializer):
         frame = DeletePCBHole(self.container, self.coords)
         frame.tkraise()
 
-class AddPCBHole(ImageInitializer):
+class AddMovePCBHole(ImageInitializer):
     def __init__(self, container, coords):
         super().__init__(container, coords)
-        self.img_label.bind("<Button-1>", self.draw_cross)
-        self.create_widgets()
-
-    def create_widgets(self):
-        self.label = ttk.Label(self.master, text='This is the add frame')
-        self.label.place(x = 700, y = 10)
-
-        # button
-        self.return_button = ttk.Button(self.container, text='Volver')
-        self.return_button.place(x = 700, y = 50)
-        self.return_button.configure(command=self.return_main)
-
-    def draw_cross(self, event):
-        line_thickness = 2
-        cv2.line(self.img_array, (event.x - 15, event.y), (event.x + 15, event.y), (0,0,255), thickness=line_thickness)
-        cv2.line(self.img_array, (event.x, event.y - 15), (event.x, event.y + 15), (0,0,255), thickness=line_thickness)
-        self.img_label.destroy()
-        self.coords.append((event.x, event.y, 9))
-        self.render_img(self.img_array, self.draw_cross)
-
-    def return_main(self):
-        for widget in self.container.winfo_children():
-            widget.destroy()
-        frame = ControlFrame(self.container, self.coords)
-        frame.tkraise()
-
-class MovePCBHole(ImageInitializer):
-    def __init__(self, container, coords):
-        super().__init__(container, coords)
-        self.langs_var = tk.StringVar(value=[f"Barreno {i}" for i in range(len(self.holes.keys()))])
         self.posx, self.posy = None, None
         self.selected_hole_name = None
+        self.dummy_img = self.img_array
+        self.img_label.bind("<Button-1>", self.new_circle)
         self.create_widgets()
         self.insert_cursor()
 
@@ -175,6 +149,8 @@ class MovePCBHole(ImageInitializer):
         self.label = ttk.Label(self.master, text='This is the move frame')
         self.label.place(x = 700, y = 10)
 
+        self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
+        self.langs_var = tk.StringVar(value=[f"Barreno {i}" for i in range(len(self.holes.keys()))])
         self.listbox = tk.Listbox(
             self.container,
             listvariable=self.langs_var,
@@ -216,9 +192,12 @@ class MovePCBHole(ImageInitializer):
         self.button_right.place(x = 700, y = 320)
 
     def move_pin_hole(self, direction):
+        self.img_label.destroy()
+        self.render_img(self.dummy_img, self.new_circle)
         # remove actual circle
-        cv2.circle(img=self.img_array, center = (self.posx, self.posy),
-                   radius=1, color =(255,27,51), thickness=-1)
+        cv2.circle(img=self.dummy_img, center = (self.posx, self.posy),
+                   radius=2, color =(255,255,255), thickness=-1)
+
         if direction == "up":
             self.posy -= 1
         elif direction == "down":
@@ -227,10 +206,19 @@ class MovePCBHole(ImageInitializer):
             self.posx -= 1
         elif direction == "right":
             self.posx += 1
+        cv2.circle(img=self.dummy_img, center = (self.posx, self.posy),
+                   radius=2, color =(0,0,255), thickness=-1)
         # new coordinate and overwrite all the pin-holes coords
         self.holes[self.selected_hole_name] = (self.posx, self.posy, self.radius)
         self.coords = list(self.holes.values())
-        self.render_img(self.img_array)
+        self.img_label.destroy()
+        self.render_img(self.dummy_img, self.new_circle)
+
+    def new_circle(self, event):
+        self.coords.append((event.x, event.y, 9))
+        self.listbox.destroy()
+        self.create_widgets()
+        self.show_green_holes(binding=self.new_circle)
 
     def return_main(self):
         for widget in self.container.winfo_children():
