@@ -1,4 +1,4 @@
-from picamera import PiCamera
+#from picamera import PiCamera
 import tkinter as tk
 from tkinter import ttk
 from functools import partial
@@ -37,7 +37,7 @@ class PiCameraPhoto():
         img_name = "img_" + str(last_img_num[-1] + 1) + ".jpg"
         return img_name
 class ImageInitializer(ttk.Frame):
-    def __init__(self, container, coords):
+    def __init__(self, container, coords=None):
         super().__init__(container)
         self.container = container
 
@@ -53,9 +53,13 @@ class ImageInitializer(ttk.Frame):
         self.img_array = cv2.merge([np.asarray(self.img), np.asarray(self.img), np.asarray(self.img)])
         #self.img_array = np.asarray(self.img)
         # List of coordinates (dummy for now)
-        self.coords = coords
+        if coords is None:
+            coords_center_obj = ProcessPinHolesCenters(self.img_array, [84,555,58,529,83,474,57,448,83,392,57,366,84,312,58,286,83,230,57,204,84,150,58,124,84,68,58,42])
+            self.coords = coords_center_obj.coords_processed
+        else:
+            self.coords = coords
         # pin-holes identifiers
-        self.holes = { (i,):coord for i, coord in enumerate(coords)}
+        self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
         self.show_green_holes()
 
     def get_last_img_dir(self):
@@ -70,13 +74,11 @@ class ImageInitializer(ttk.Frame):
         self.img_label.bind("<Button-1>", binding)
 
     def show_green_holes(self):
-        for c in self.coords:
-            center = c[0]
-            radius = c[1]
+        for coord in  self.coords:
+            center = (coord[0], coord[1])
+            radius = coord[2]
             color = (0,255,0)
-            if radius == 2:
-                color = (0,0,255)
-            cv2.circle(self.img_array, center, radius, color, 4)
+            cv2.circle(self.img_array, center, radius, color, 3)
         self.draw_hole_number()
         self.render_img(self.img_array)
 
@@ -87,7 +89,7 @@ class ImageInitializer(ttk.Frame):
 
     def draw_hole_number(self):
         for num, coord in self.holes.items():
-            cv2.putText(self.img_array, f"B{num[0]}", (coord[0][0]-10, coord[0][1]-11), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,135,160), 2)
+            cv2.putText(self.img_array, f"B{num[0]}", (coord[0]-10, coord[1]-11), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,135,160), 2)
 
 
 class ControlFrame(ImageInitializer):
@@ -112,11 +114,6 @@ class ControlFrame(ImageInitializer):
         self.move_button.place(x = 700, y = 90)
         self.move_button.configure(command=self.press_move)
 
-        # button
-        self.save_button = ttk.Button(self.container, text='Guardar')
-        self.save_button.place(x = 700, y = 130)
-        self.save_button.configure(command=self.save_coords)
-
     def clear_frame(self):
         for widget in self.container.winfo_children():
             widget.destroy()
@@ -135,22 +132,6 @@ class ControlFrame(ImageInitializer):
         self.clear_frame()
         frame = DeletePCBHole(self.container, self.coords)
         frame.tkraise()
-
-    def save_coords(self):
-        locations = [self.img_path[85:]]
-        for c in self.coords:
-            a, b = c[0]
-            r = c[1]
-            x1, x2 = str(a - r), str(a + r)
-            y1, y2 = str(b + r), str(b - r)
-            locations.append(x1)
-            locations.append(y1)
-            locations.append(x2)
-            locations.append(y2)
-        with open("dataset/processed_locations/hand_picked_better.csv", "a") as file:
-            coords_writer = csv.writer(file)
-            coords_writer.writerow(locations)
-
 
 class AddPCBHole(ImageInitializer):
     def __init__(self, container, coords):
@@ -172,7 +153,7 @@ class AddPCBHole(ImageInitializer):
         cv2.line(self.img_array, (event.x - 15, event.y), (event.x + 15, event.y), (0,0,255), thickness=line_thickness)
         cv2.line(self.img_array, (event.x, event.y - 15), (event.x, event.y + 15), (0,0,255), thickness=line_thickness)
         self.img_label.destroy()
-        self.coords.append(((event.x, event.y), 9))
+        self.coords.append((event.x, event.y, 9))
         self.render_img(self.img_array, self.draw_cross)
 
     def return_main(self):
@@ -209,8 +190,8 @@ class MovePCBHole(ImageInitializer):
     def move_selected(self, event):
         # get pin hole
         self.selected_hole_name = self.listbox.curselection()
-        self.posx, self.posy = self.holes[self.selected_hole_name][0]
-        self.radius = self.holes[self.selected_hole_name][1]
+        self.posx, self.posy = self.holes[self.selected_hole_name][0], self.holes[self.selected_hole_name][1]
+        self.radius = self.holes[self.selected_hole_name][2]
         self.show_green_holes()
         self.colour_selected((self.posx, self.posy), (255,227,51), self.radius)
         #self.holes.pop(self.selected_hole_name)
@@ -247,7 +228,7 @@ class MovePCBHole(ImageInitializer):
         elif direction == "right":
             self.posx += 1
         # new coordinate and overwrite all the pin-holes coords
-        self.holes[self.selected_hole_name] = ((self.posx, self.posy), self.radius)
+        self.holes[self.selected_hole_name] = (self.posx, self.posy, self.radius)
         self.coords = list(self.holes.values())
         self.render_img(self.img_array)
 
@@ -280,8 +261,8 @@ class DeletePCBHole(ImageInitializer):
     def select(self, event):
         # get pin hole
         self.selected_hole_name = self.listbox.curselection()
-        self.center = self.holes[self.selected_hole_name][0]
-        self.radius = self.holes[self.selected_hole_name][1]
+        self.center = (self.holes[self.selected_hole_name][0], self.holes[self.selected_hole_name][1])
+        self.radius = self.holes[self.selected_hole_name][2]
         self.show_green_holes()
         self.colour_selected(self.center, (255,0,255), self.radius)
 
@@ -312,13 +293,14 @@ class ProcessPinHolesCenters():
         self.img = img
         self.one_channel, _, _ = cv2.split(self.img)
         self.image_bin_not = cv2.bitwise_not(self.one_channel)
+        #self.image_bin_not = cv2.bitwise_not(self.img)
         self.raw_coords = raw_coords
         self.coords_processed = []
         self.get_img_coords()
 
     def get_img_coords(self):
         for i in range(0, len(self.raw_coords), 4):
-            # IMPORTANT: It seems that the coords in the csv are in the following order: x2,y2,x1,y1
+            # IMPORTANT: It seems that the coords in the csv are not in the order of x1,y1,x2,y2
             x2, y2 = int(self.raw_coords[i]), int(self.raw_coords[i+1])
             x1, y1 = int(self.raw_coords[i+2]), int(self.raw_coords[i+3])
             half_x = (x2-x1) // 2
@@ -331,14 +313,13 @@ class ProcessPinHolesCenters():
             self.get_sub_image_center(x1,y1,x2,y2)
 
     def get_sub_image_center(self, x1, y1, x2, y2):
-        print(x1,x2,y1,y2)
         sub_image = self.image_bin_not[y1:y2, x1:x2]
-        #sub = self.img[y1:y2, x1:x2, :]
+        sub = self.img[y1:y2, x1:x2, :]
         detected_circles = cv2.HoughCircles(
                                 sub_image,
                                 cv2.HOUGH_GRADIENT, 1, 40,
                                 param1 = 50,
-                                param2 = 18,
+                                param2 = 13,
                                 minRadius = 5,
                                 maxRadius = 20
                             )
@@ -348,8 +329,7 @@ class ProcessPinHolesCenters():
             a, b, r = int(pt[0]), int(pt[1]), int(pt[2])
             new_x1 = x1 + a
             new_y1 = y1 + b
-            self.coords_processed.append(new_x1)
-            self.coords_processed.append(new_y1)
+            self.coords_processed.append((new_x1, new_y1, r))
 
 class App(tk.Tk):
     def __init__(self):
@@ -359,7 +339,6 @@ class App(tk.Tk):
         self.resizable(False, False)
 
 if __name__ == "__main__":
-    coords = ProcessPinHolesCenters([35,605,17,623,66,583,48,601,153,604,135,621,53,552,35,570,53,512,35,530,145,536,127,554,157,505,139,524,64,451,46,469,35,427,17,445,71,191,53,209,96,168,78,186,145,102,127,120,478,237,460,255,423,581,405,599])
     app = App()
-    ControlFrame(app, coords.coords_processed)
+    ControlFrame(app, coords=None)
     app.mainloop()
