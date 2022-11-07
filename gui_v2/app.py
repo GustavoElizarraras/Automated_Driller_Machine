@@ -102,9 +102,9 @@ class ControlFrame(ImageInitializer):
     def create_widgets(self):
 
         # button
-        self.add_button = ttk.Button(self.container, text='Añadir barreno')
-        self.add_button.place(x = 700, y = 10)
-        self.add_button.configure(command=self.press_add)
+        self.move_button = ttk.Button(self.container, text='Añadir o Mover barreno')
+        self.move_button.place(x = 700, y = 10)
+        self.move_button.configure(command=self.press_move_add)
 
         # button
         self.del_button = ttk.Button(self.container, text='Eliminar barreno')
@@ -112,20 +112,15 @@ class ControlFrame(ImageInitializer):
         self.del_button.configure(command=self.press_delete)
 
         # button
-        self.move_button = ttk.Button(self.container, text='Añadir o Mover barreno')
-        self.move_button.place(x = 700, y = 90)
-        self.move_button.configure(command=self.press_move)
+        self.del_button = ttk.Button(self.container, text='Iniciar barrenado')
+        self.del_button.place(x = 700, y = 90)
+        self.del_button.configure(command=self.press_delete)
 
     def clear_frame(self):
         for widget in self.container.winfo_children():
             widget.destroy()
 
-    def press_add(self):
-        self.clear_frame()
-        frame = AddPCBHole(self.container, self.coords)
-        frame.tkraise()
-
-    def press_move(self):
+    def press_move_add(self):
         self.clear_frame()
         frame = AddMovePCBHole(self.container, self.coords)
         frame.tkraise()
@@ -146,8 +141,10 @@ class AddMovePCBHole(ImageInitializer):
         self.insert_cursor()
 
     def create_widgets(self):
-        self.label = ttk.Label(self.master, text='This is the move frame')
-        self.label.place(x = 700, y = 10)
+        self.instructions = tk.Text(self.master, height=8, width=28)
+        text='Para añadir un barreno da \nclick sobre la imagen, para mover un barreno, seleccionael barreno y presiona los \nbotones correspondientes'
+        self.instructions.insert("e", text)
+        self.instructions.place(x = 680, y = 10)
 
         self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
         self.langs_var = tk.StringVar(value=[f"Barreno {i}" for i in range(len(self.holes.keys()))])
@@ -155,12 +152,12 @@ class AddMovePCBHole(ImageInitializer):
             self.container,
             listvariable=self.langs_var,
             height=6)
-        self.listbox.place(x = 700, y = 90)
+        self.listbox.place(x = 700, y = 130)
         self.listbox.bind('<<ListboxSelect>>', self.move_selected)
 
         # button
         self.return_button = ttk.Button(self.container, text='Volver')
-        self.return_button.place(x = 700, y = 50)
+        self.return_button.place(x = 700, y = 420)
         self.return_button.configure(command=self.return_main)
 
     def move_selected(self, event):
@@ -179,17 +176,17 @@ class AddMovePCBHole(ImageInitializer):
         self.move_left = partial(self.move_pin_hole, "left")
         self.move_right = partial(self.move_pin_hole, "right")
         # buttons
-        self.button_up = ttk.Button(self.container, text='up', command=self.move_up)
-        self.button_up.place(x = 700, y = 200)
+        self.button_up = ttk.Button(self.container, text='arriba', command=self.move_up)
+        self.button_up.place(x = 700, y = 250)
 
-        self.button_down = ttk.Button(self.container, text='down', command=self.move_down)
-        self.button_down.place(x = 700, y = 240)
+        self.button_down = ttk.Button(self.container, text='abajo', command=self.move_down)
+        self.button_down.place(x = 700, y = 290)
 
-        self.button_left = ttk.Button(self.container, text='left', command=self.move_left)
-        self.button_left.place(x = 700, y = 280)
+        self.button_left = ttk.Button(self.container, text='izquierda', command=self.move_left)
+        self.button_left.place(x = 700, y = 330)
 
-        self.button_right = ttk.Button(self.container, text='right', command=self.move_right)
-        self.button_right.place(x = 700, y = 320)
+        self.button_right = ttk.Button(self.container, text='derecha', command=self.move_right)
+        self.button_right.place(x = 700, y = 370)
 
     def move_pin_hole(self, direction):
         self.img_label.destroy()
@@ -233,17 +230,19 @@ class DeletePCBHole(ImageInitializer):
         self.create_listbox()
 
     def create_widgets(self):
-        self.label = ttk.Label(self.master, text='This is the delete frame')
-        self.label.place(x = 700, y = 10)
+        self.instructions = tk.Text(self.master, height=2, width=30)
+        text='Selecciona y presiona eliminar'
+        self.instructions.insert("e", text)
+        self.instructions.place(x = 680, y = 10)
 
         # button
         self.delete_button = ttk.Button(self.container, text='Eliminar')
-        self.delete_button.place(x = 700, y = 300)
+        self.delete_button.place(x = 700, y = 180)
         self.delete_button.configure(command=self.delete_selected)
 
         # button
         self.return_button = ttk.Button(self.container, text='Volver')
-        self.return_button.place(x = 700, y = 350)
+        self.return_button.place(x = 700, y = 230)
         self.return_button.configure(command=self.return_main)
 
     def select(self, event):
@@ -266,7 +265,7 @@ class DeletePCBHole(ImageInitializer):
             self.container,
             listvariable=self.langs_var,
             height=6)
-        self.listbox.place(x = 700, y = 90)
+        self.listbox.place(x = 700, y = 60)
         self.listbox.bind('<<ListboxSelect>>', self.select)
         self.create_widgets()
 
