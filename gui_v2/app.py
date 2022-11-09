@@ -59,6 +59,65 @@ class PiCameraPhoto(ttk.Frame):
             widget.destroy()
         frame = ControlFrame(self.container, [])
         frame.tkraise()
+
+class BinarizingFrame(ttk.Frame):
+    def __init__(self, container):
+        super().__init__(container)
+        self.container = container
+        # Hardcoded path, to remove later
+        self.img_path = os.getcwd() + "/dataset/useful_handpicked_rot/12300111_temp_2.jpg"
+
+        # PCB Image
+        self.img = Image.open(self.img_path)
+        # image for opencv
+        # self.img_array = cv2.merge([np.asarray(self.img), np.asarray(self.img), np.asarray(self.img)])
+
+        self.img_array = np.asarray(self.img)
+
+        self.render_img(self.img_array)
+        self.create_widgets()
+
+    def render_img(self, img_array):
+        self.render = ImageTk.PhotoImage(Image.fromarray(img_array))
+        self.img_label = ttk.Label(self.container, image=self.render, cursor="cross")
+        self.img_label.place(x = 0, y = 0)
+
+    def create_widgets(self):
+
+        self.slider1 = tk.Scale(self.container, from_=0, to=255, orient="horizontal")
+        self.slider1.bind("<ButtonRelease-1>", self.binarize)
+        self.slider1.place(x=700, y=10)
+
+        self.slider1_2 = tk.Scale(self.container, from_=0, to=255, orient="horizontal")
+        self.slider1_2.bind("<ButtonRelease-1>", self.binarize)
+        self.slider1_2.place(x=700, y=50)
+
+        self.slider2 = tk.Scale(self.container, from_=0, to=5, orient="horizontal")
+        self.slider2.bind("<ButtonRelease-1>", self.dilate)
+        self.slider2.place(x=700, y=90)
+
+        self.slider3 = tk.Scale(self.container, from_=0, to=5, orient="horizontal")
+        self.slider3.bind("<ButtonRelease-1>", self.erode)
+        self.slider3.place(x=700, y=130)
+
+    def binarize(self, event):
+        threshold_low = self.slider1.get()
+        threshold_high = self.slider1_2.get()
+        _, new_image = cv2.threshold(self.img_array, threshold_low , threshold_high, cv2.THRESH_BINARY)
+        self.render_img(new_image)
+
+    def dilate(self, event):
+        k = self.slider2.get()
+        kernel = np.ones((k,k), np.uint8)
+        new_image = cv2.dilate(self.img_array, kernel, iterations = 1)
+        self.render_img(new_image)
+
+    def erode(self, event):
+        k = self.slider3.get()
+        kernel = np.ones((k,k), np.uint8)
+        new_image = cv2.erode(self.img_array, kernel, iterations = 1)
+        self.render_img(new_image)
+
 class ImageInitializer(ttk.Frame):
     def __init__(self, container, coords=None):
         super().__init__(container)
@@ -350,5 +409,6 @@ class App(tk.Tk):
 
 if __name__ == "__main__":
     app = App()
-    PiCameraPhoto(app, "/")
+    #PiCameraPhoto(app, "/")
+    BinarizingFrame(app)
     app.mainloop()
