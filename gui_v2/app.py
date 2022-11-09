@@ -16,22 +16,22 @@ class PiCameraPhoto(ttk.Frame):
         super().__init__(container)
         self.container = container
         self.create_widgets()
-        #self.camera = PiCamera()
-        #self.camera.resolution = (640,640)
+        self.camera = PiCamera()
+        self.camera.resolution = (640,640)
         self.dir = dir
-        #self.last_img_path = self.get_last_file_dir()
-        #self.img_name = self.get_img_name(self.last_img_path)
-        #self.take_photo(last_img_path, img_name)
+        self.last_img_path = self.get_last_file_dir()
+        self.img_name = self.get_img_name(self.last_img_path)
+        self.take_photo()
 
     def take_photo(self):
         label = tk.Label(self.container, text= "Tomando foto")
         label.place(x = 380, y=150)
-        #self.camera.start_preview()
+        self.camera.start_preview()
         # Camera warm-up time
         time.sleep(2)
-#        self.camera.capture(self.dir + self.img_name)
+        self.camera.capture(self.dir + self.img_name)
         time.sleep(2)
-        self.display_control_panel()
+        self.display_binarizing_panel()
 
     def get_last_file_dir(self):
         list_of_files = glob.glob(self.dir + "*")
@@ -54,18 +54,20 @@ class PiCameraPhoto(ttk.Frame):
         self.start_button.place(x = 390, y = 130)
         self.start_button.configure(command=self.take_photo)
 
-    def display_control_panel(self):
+    def display_binarizing_panel(self):
         for widget in self.container.winfo_children():
             widget.destroy()
-        frame = ControlFrame(self.container, [])
+        frame = BinarizingFrame(self.container, self.img_name)
         frame.tkraise()
 
 class BinarizingFrame(ttk.Frame):
-    def __init__(self, container):
+    def __init__(self, container, img_name):
         super().__init__(container)
         self.container = container
+        self.img_name = img_name
         # Hardcoded path, to remove later
-        self.img_path = os.getcwd() + "/dataset/useful_handpicked_rot/12300111_temp_2.jpg"
+        #self.img_path = os.getcwd() + "/dataset/useful_handpicked_rot/12300111_temp_2.jpg"
+        self.img_path = "/Documents/pcb_images/" + self.img_name
 
         # PCB Image
         self.img = Image.open(self.img_path)
@@ -100,6 +102,11 @@ class BinarizingFrame(ttk.Frame):
         self.slider3.bind("<ButtonRelease-1>", self.erode)
         self.slider3.place(x=700, y=130)
 
+        # button
+        self.continue_button = ttk.Button(self.container, text='Detectar barrenos')
+        self.continue_button.place(x = 700, y = 10)
+        self.continue_button.configure(command=self.display_control_panel)
+
     def binarize(self, event):
         threshold_low = self.slider1.get()
         threshold_high = self.slider1_2.get()
@@ -118,17 +125,23 @@ class BinarizingFrame(ttk.Frame):
         new_image = cv2.erode(self.img_array, kernel, iterations = 1)
         self.render_img(new_image)
 
+    def display_control_panel(self):
+        for widget in self.container.winfo_children():
+            widget.destroy()
+        frame = ControlFrame(self.container, [])
+        frame.tkraise()
+
 class ImageInitializer(ttk.Frame):
     def __init__(self, container, coords=None):
         super().__init__(container)
         self.container = container
 
-        #self.dir = "/Documents/img_test/"
+        self.dir = "/Documents/pcb_images/"
         #self.img_path = self.get_last_img_dir()
 
         # Hardcoded path, to remove later
-        self.img_path = os.getcwd() + "/dataset/useful_handpicked_rot/12300111_temp_2.jpg"
-
+        #self.img_path = os.getcwd() + "/dataset/useful_handpicked_rot/12300111_temp_2.jpg"
+        self.img_path = self.get_last_img_dir()
         # PCB Image
         self.img = Image.open(self.img_path)
         # image for opencv
