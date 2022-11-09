@@ -11,20 +11,27 @@ import glob
 import time
 import re
 
-class PiCameraPhoto():
-    def __init__(self, dir):
-        self.camera = PiCamera()
-        self.camera.resolution = (640,640)
+class PiCameraPhoto(ttk.Frame):
+    def __init__(self, container, dir):
+        super().__init__(container)
+        self.container = container
+        self.create_widgets()
+        #self.camera = PiCamera()
+        #self.camera.resolution = (640,640)
         self.dir = dir
-        last_img_path = self.get_last_file_dir()
-        img_name = self.get_img_name(last_img_path)
-        self.take_photo(last_img_path, img_name)
+        #self.last_img_path = self.get_last_file_dir()
+        #self.img_name = self.get_img_name(self.last_img_path)
+        #self.take_photo(last_img_path, img_name)
 
-    def take_photo(self, img_name):
-        self.camera.start_preview()
+    def take_photo(self):
+        label = tk.Label(self.container, text= "Tomando foto")
+        label.place(x = 380, y=150)
+        #self.camera.start_preview()
         # Camera warm-up time
         time.sleep(2)
-        self.camera.capture(self.dir + img_name)
+#        self.camera.capture(self.dir + self.img_name)
+        time.sleep(2)
+        self.display_control_panel()
 
     def get_last_file_dir(self):
         list_of_files = glob.glob(self.dir + "*")
@@ -36,6 +43,22 @@ class PiCameraPhoto():
         last_img_num = re.findall(r'\d+', last_img)
         img_name = "img_" + str(last_img_num[-1] + 1) + ".jpg"
         return img_name
+
+    def create_widgets(self):
+        self.instructions = tk.Text(self.master, height=1, width=70)
+        text='Una vez que la placa esté fijada, presione el botón "Tomar Foto"'
+        self.instructions.insert("e", text)
+        self.instructions.place(x = 200, y = 100)
+        # button
+        self.start_button = ttk.Button(self.container, text='Tomar foto')
+        self.start_button.place(x = 390, y = 130)
+        self.start_button.configure(command=self.take_photo)
+
+    def display_control_panel(self):
+        for widget in self.container.winfo_children():
+            widget.destroy()
+        frame = ControlFrame(self.container, [])
+        frame.tkraise()
 class ImageInitializer(ttk.Frame):
     def __init__(self, container, coords=None):
         super().__init__(container)
@@ -327,5 +350,5 @@ class App(tk.Tk):
 
 if __name__ == "__main__":
     app = App()
-    ControlFrame(app, coords=None)
+    PiCameraPhoto(app, "/")
     app.mainloop()
