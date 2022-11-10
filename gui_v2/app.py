@@ -1,4 +1,4 @@
-#from picamera import PiCamera
+from picamera import PiCamera
 import tkinter as tk
 from tkinter import ttk
 from functools import partial
@@ -20,6 +20,7 @@ class PiCameraPhoto(ttk.Frame):
         self.camera.resolution = (640,640)
         self.dir = dir
         self.last_img_path = self.get_last_file_dir()
+        print(self.last_img_path)
         self.img_name = self.get_img_name(self.last_img_path)
         self.take_photo()
 
@@ -30,6 +31,7 @@ class PiCameraPhoto(ttk.Frame):
         # Camera warm-up time
         time.sleep(2)
         self.camera.capture(self.dir + self.img_name)
+        self.camera.stop_preview()
         time.sleep(2)
         self.display_binarizing_panel()
 
@@ -39,9 +41,10 @@ class PiCameraPhoto(ttk.Frame):
         return latest_file
 
     def get_img_name(self, img_path_name):
-        last_img = img_path_name[:-11]
+        last_img = img_path_name[-11:-1]
         last_img_num = re.findall(r'\d+', last_img)
-        img_name = "img_" + str(last_img_num[-1] + 1) + ".jpg"
+        print(last_img_num, type(last_img_num))
+        img_name = "img_" + str(int(last_img_num[-1]) + 1) + ".jpg"
         return img_name
 
     def create_widgets(self):
@@ -67,7 +70,7 @@ class BinarizingFrame(ttk.Frame):
         self.img_name = img_name
         # Hardcoded path, to remove later
         #self.img_path = os.getcwd() + "/dataset/useful_handpicked_rot/12300111_temp_2.jpg"
-        self.img_path = "/Documents/pcb_images/" + self.img_name
+        self.img_path = "/home/pi/Documents/pcb_images/" + self.img_name
 
         # PCB Image
         self.img = Image.open(self.img_path)
@@ -136,7 +139,7 @@ class ImageInitializer(ttk.Frame):
         super().__init__(container)
         self.container = container
 
-        self.dir = "/Documents/pcb_images/"
+        self.dir = "/home/pi/Documents/pcb_images/"
         #self.img_path = self.get_last_img_dir()
 
         # Hardcoded path, to remove later
@@ -145,8 +148,8 @@ class ImageInitializer(ttk.Frame):
         # PCB Image
         self.img = Image.open(self.img_path)
         # image for opencv
-        self.img_array = cv2.merge([np.asarray(self.img), np.asarray(self.img), np.asarray(self.img)])
-        #self.img_array = np.asarray(self.img)
+        #self.img_array = cv2.merge([np.asarray(self.img), np.asarray(self.img), np.asarray(self.img)])
+        self.img_array = np.asarray(self.img)
         # List of coordinates (dummy for now)
         if coords is None:
             coords_center_obj = ProcessPinHolesCenters(self.img_array, [84,555,58,529,83,474,57,448,83,392,57,366,84,312,58,286,83,230,57,204,84,150,58,124,84,68,58,42])
@@ -416,12 +419,12 @@ class ProcessPinHolesCenters():
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.geometry("900x700")
+        self.geometry("900x650")
         self.title('BARRENADORA AUTOMATIZADA')
         self.resizable(False, False)
 
 if __name__ == "__main__":
     app = App()
-    #PiCameraPhoto(app, "/")
-    BinarizingFrame(app)
+    PiCameraPhoto(app, "/home/pi/Documents/pcb_images/")
+    #BinarizingFrame(app)
     app.mainloop()
