@@ -11,6 +11,9 @@ from object_detection.dataset_tools import tf_record_creation_util
 Usage:
 python create_tf_records.py --csv_input=dataset/test.csv  --output_path=deep_learning/data/test.record
 python create_tf_records.py --csv_input=dataset/train.csv  --output_path=deep_learning/data/train.record
+
+/home/elizarraras/.pyenv/versions/3.8.12/envs/tt/bin/python /home/elizarraras/Documents/Automated_Driller_Machine/deep_learning/create_tf_records.py --csv_input=dataset/processed_locations/test_good.csv --output_path=deep_learning/data2/test.record
+/home/elizarraras/.pyenv/versions/3.8.12/envs/tt/bin/python /home/elizarraras/Documents/Automated_Driller_Machine/deep_learning/create_tf_records.py --csv_input=dataset/processed_locations/train_good.csv --output_path=deep_learning/tfrecords_train/train.record
 """
 
 flags = absl.flags
@@ -61,7 +64,7 @@ def create_tf_example(image_row):
 
 def main(_):
     # writer = tf.io.TFRecordWriter(FLAGS.output_path)
-    num_shards=5
+    num_shards=10
     # output_filebase='/path/to/train_dataset.record'
 
     with contextlib2.ExitStack() as tf_record_close_stack:
