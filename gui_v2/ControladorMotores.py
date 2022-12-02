@@ -33,13 +33,14 @@ direcm=True
 direcp=True
 
 def pulso(PWM):
+    # 1KHz
     GPIO.output(PWM, False)
-    time.sleep(0.0005)
+    time.sleep(0.00025)
     GPIO.output(PWM, True)
-    time.sleep(0.001)
-    GPIO.output(PWM, False)
     time.sleep(0.0005)
-
+    GPIO.output(PWM, False)
+    time.sleep(0.00025)
+    
 def Motor_bloque(pulsos,direcc,motor):   
     ctr=0
     GPIO.output(motor[0], direcc)
