@@ -1,4 +1,4 @@
-from picamera import PiCamera
+#from picamera import PiCamera
 import tkinter as tk
 from tkinter import ttk
 from functools import partial
@@ -17,7 +17,7 @@ class PiCameraPhoto(ttk.Frame):
         self.container = container
         self.create_widgets()
         self.camera = PiCamera()
-        self.camera.resolution = (640,640)
+        self.camera.resolution = (2592, 1944)
         self.dir = dir
         self.last_img_path = self.get_last_file_dir()
         print(self.last_img_path)
@@ -72,14 +72,14 @@ class BinarizingFrame(ttk.Frame):
         #self.img_path = os.getcwd() + "/dataset/useful_handpicked_rot/12300111_temp_2.jpg"
         self.img_path = "/home/pi/Documents/pcb_images/" + self.img_name
 
-        # PCB Image
-        self.img = Image.open(self.img_path)
-        # image for opencv
-        # self.img_array = cv2.merge([np.asarray(self.img), np.asarray(self.img), np.asarray(self.img)])
-
-        self.img_array = np.asarray(self.img)
-        self.ch = cv2.imread(self.img_path, 0)
-        self.render_img(self.ch)
+        # gray image of the pcb that takes the camera
+        self.gray_img = cv2.imread(self.img_path, 0)
+        image_center = tuple(np.array(self.gray_img.shape[1::-1]) / 2)
+        rot_mat = cv2.getRotationMatrix2D(image_center, -3.4, 1.0)
+        self.gray_img = cv2.warpAffine(self.gray_img, rot_mat, self.gray_img.shape[1::-1], flags=cv2.INTER_LINEAR)
+        self.gray_img = self.gray_img[515:1465, 600:1550]
+        self.gray_img = cv2.resize(self.gray_img, (640, 640), interpolation= cv2.INTER_LINEAR)
+        self.render_img(self.gray_img)
         self.create_widgets()
 
     def render_img(self, img_array):
@@ -113,19 +113,19 @@ class BinarizingFrame(ttk.Frame):
     def binarize(self, event):
         threshold_low = self.slider1.get()
         threshold_high = self.slider1_2.get()
-        _, new_image = cv2.threshold(self.ch, threshold_low , threshold_high, cv2.THRESH_BINARY)
+        _, new_image = cv2.threshold(self.gray_img, threshold_low , threshold_high, cv2.THRESH_BINARY)
         self.render_img(new_image)
 
     def dilate(self, event):
         k = self.slider2.get()
         kernel = np.ones((k,k), np.uint8)
-        new_image = cv2.dilate(self.ch, kernel, iterations = 1)
+        new_image = cv2.dilate(self.gray_img, kernel, iterations = 1)
         self.render_img(new_image)
 
     def erode(self, event):
         k = self.slider3.get()
         kernel = np.ones((k,k), np.uint8)
-        new_image = cv2.erode(self.ch, kernel, iterations = 1)
+        new_image = cv2.erode(self.gray_img, kernel, iterations = 1)
         self.render_img(new_image)
 
     def display_control_panel(self):
@@ -143,19 +143,29 @@ class ImageInitializer(ttk.Frame):
         #self.img_path = self.get_last_img_dir()
 
         # Hardcoded path, to remove later
-        #self.img_path = os.getcwd() + "/dataset/useful_handpicked_rot/12300111_temp_2.jpg"
-        self.img_path = self.get_last_img_dir()
+        self.img_path = "gui_v2/good_img.jpg"
+        # self.img_path = os.getcwd() + "/dataset/useful_handpicked_rot/12300111_temp_2.jpg"
+        # self.img_path = self.get_last_img_dir()
         # PCB Image
-        self.img = Image.open(self.img_path)
-        # image for opencv
-        #self.img_array = cv2.merge([np.asarray(self.img), np.asarray(self.img), np.asarray(self.img)])
-        self.img_array = np.asarray(self.img)
+
+        # gray image of the pcb that takes the camera
+        self.img_array = cv2.imread(self.img_path, 0)
+        image_center = tuple(np.array(self.img_array.shape[1::-1]) / 2)
+        rot_mat = cv2.getRotationMatrix2D(image_center, -3.4, 1.0)
+        self.img_array = cv2.warpAffine(self.img_array, rot_mat, self.img_array.shape[1::-1], flags=cv2.INTER_LINEAR)
+        self.img_array = self.img_array[515:1465, 600:1550]
+        self.img_array = cv2.resize(self.img_array, (640, 640), interpolation= cv2.INTER_LINEAR)
+        _, self.img_array = cv2.threshold(self.img_array, 197 , 255, cv2.THRESH_BINARY)
+        self.img_array = cv2.merge([np.asarray(self.img_array), np.asarray(self.img_array), np.asarray(self.img_array)])
+
         # List of coordinates (dummy for now)
         if coords is None:
-            coords_center_obj = ProcessPinHolesCenters(self.img_array, [84,555,58,529,83,474,57,448,83,392,57,366,84,312,58,286,83,230,57,204,84,150,58,124,84,68,58,42])
+            coords_center_obj = ProcessPinHolesCenters(self.img_array, [0, 0, 5, 5])
+            #coords_center_obj = ProcessPinHolesCenters(self.img_array, [84,555,58,529,83,474,57,448,83,392,57,366,84,312,58,286,83,230,57,204,84,150,58,124,84,68,58,42])
             self.coords = coords_center_obj.coords_processed
         else:
             self.coords = coords
+
         # pin-holes identifiers
         self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
         self.show_green_holes()
@@ -172,7 +182,7 @@ class ImageInitializer(ttk.Frame):
         self.img_label.bind("<Button-1>", binding)
 
     def show_green_holes(self, binding=None):
-        for coord in  self.coords:
+        for coord in self.coords:
             center = (coord[0], coord[1])
             radius = coord[2]
             color = (0,255,0)
@@ -193,8 +203,8 @@ class ImageInitializer(ttk.Frame):
 
 
 class ControlFrame(ImageInitializer):
-    def __init__(self, container, coords):
-        super().__init__(container, coords)
+    def __init__(self, container, coords=None):
+        super().__init__(container, coords=None)
         self.create_widgets()
 
     def create_widgets(self):
@@ -386,8 +396,8 @@ class ProcessPinHolesCenters():
     def get_img_coords(self):
         for i in range(0, len(self.raw_coords), 4):
             # IMPORTANT: It seems that the coords in the csv are not in the order of x1,y1,x2,y2
-            x2, y2 = int(self.raw_coords[i]), int(self.raw_coords[i+1])
-            x1, y1 = int(self.raw_coords[i+2]), int(self.raw_coords[i+3])
+            x1, y1 = int(self.raw_coords[i]), int(self.raw_coords[i+1])
+            x2, y2 = int(self.raw_coords[i+2]), int(self.raw_coords[i+2])
             half_x = (x2-x1) // 2
             half_y = (y2-y1) // 2
             # Big box to detect the center
@@ -399,7 +409,6 @@ class ProcessPinHolesCenters():
 
     def get_sub_image_center(self, x1, y1, x2, y2):
         sub_image = self.image_bin_not[y1:y2, x1:x2]
-        sub = self.img[y1:y2, x1:x2, :]
         detected_circles = cv2.HoughCircles(
                                 sub_image,
                                 cv2.HOUGH_GRADIENT, 1, 40,
@@ -408,13 +417,15 @@ class ProcessPinHolesCenters():
                                 minRadius = 5,
                                 maxRadius = 20
                             )
-
-        for pt in detected_circles[0, :]:
-            # circle coords
-            a, b, r = int(pt[0]), int(pt[1]), int(pt[2])
-            new_x1 = x1 + a
-            new_y1 = y1 + b
-            self.coords_processed.append((new_x1, new_y1, r))
+        try:
+            for pt in detected_circles[0, :]:
+                # circle coords
+                a, b, r = int(pt[0]), int(pt[1]), int(pt[2])
+                new_x1 = x1 + a
+                new_y1 = y1 + b
+                self.coords_processed.append((new_x1, new_y1, r))
+        except:
+            pass
 
 class App(tk.Tk):
     def __init__(self):
@@ -425,6 +436,6 @@ class App(tk.Tk):
 
 if __name__ == "__main__":
     app = App()
-    PiCameraPhoto(app, "/home/pi/Documents/pcb_images/")
-    #BinarizingFrame(app)
+    ControlFrame(app)
+    # BinarizingFrame(app, "/home/pi/Documents/pcb_images/")
     app.mainloop()
