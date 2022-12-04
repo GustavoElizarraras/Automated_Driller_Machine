@@ -27,6 +27,7 @@ motor_y = [4,14]
 motor_z = [15,18]
 motor_mesa = [17,27]
 motor_pistones = [22,23]
+Taladro=24
 direc_x = True
 direc_y = True
 direc_z = True
@@ -56,7 +57,7 @@ def mover_motor(pulsos,direcc,motor):
             return ctr
         while GPIO.input(1):
             time.sleep(0.000005)
-            GPIO.output(24,False)
+            GPIO.output(Taladro,False)
     return ctr
 
 def inicio():
@@ -87,6 +88,31 @@ def home():
 
 def setup_mesa():
     ctrm=ctrm+mover_motor(ctrm,not direc_mesa,motor_mesa)
+
+def Z_Work():
+    ctrz += mover_motor(5000,direc_z,motor_z)
+    GPIO.output(Taladro,True)
+
+def Work(pulsos_x,coordenada_x,pulsos_y,coordenada_y):
+    ctrx += mover_motor(pulsos_x,coordenada_x,motor_x)
+    ctry += mover_motor(pulsos_y,coordenada_y,motor_y)
+
+def Barrenar():
+    ctrz += mover_motor(1500,direc_z,motor_z)
+    ctrz += mover_motor(1500,not direc_z,motor_z)
+
+def Z_Home():
+    ctrz += mover_motor(5000,not direc_z,motor_z)
+    GPIO.output(Taladro,False)
+   
+def Asciende_mesa():
+    ctrm += mover_motor(1000,direc_mesa,motor_mesa)
+
+def liberar():
+    ctrp += mover_motor(ctrp,not direc_pistones,motor_pistones)
+
+def Y_Usuario():
+    ctry += mover_motor(10000-ctry,direc_y,motor_y)    
 
 
 
