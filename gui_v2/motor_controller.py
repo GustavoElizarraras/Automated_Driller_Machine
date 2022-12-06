@@ -14,7 +14,6 @@ class PinsSetup():
         self.setup_pins()
 
     def setup_pins(self):
-
         for pin in self.output_pins:
             GPIO.setup(pin, GPIO.OUT)
             GPIO.output(pin, False)
@@ -35,7 +34,7 @@ class MotorController(PinsSetup):
             "driller": 14
         }
 
-    def send_step_pulse(self, pwm_pin):
+    def send_pulse(self, pwm_pin):
         # 1KHz
         GPIO.output(pwm_pin, False)
         time.sleep(0.00025)
@@ -44,76 +43,94 @@ class MotorController(PinsSetup):
         GPIO.output(pwm_pin, False)
         time.sleep(0.00025)
 
-    def move_engine(self, pulsos, direcc, motor):
+    def move_motor(self, pulses, direcc, motor):
 
         GPIO.output(self.motors[motor]["pins"][0], direcc)
 
-        for _ in range(pulsos):
+        for _ in range(pulses):
 
             if direcc:
                 self.motors[motor]["position"] += 1
             else:
                 self.motors[motor]["position"] -= 1
 
-            if self.motors[motor]["position"] < 0:
-                self.motors[motor]["position"] = 0
+            if  self.motors[motor]["position"] > 1e4:
                 break
 
-            if GPIO.input(25) or GPIO.input(8) or GPIO.input(7) or self.motors[motor]["position"] > 1e4:
+            if GPIO.input(25):
+                # supposing x
+                self.motors["x"]["position"] = 0
+                break
+            if GPIO.input(8):
+                # supposing y
+                self.motors["y"]["position"] = 0
+                break
+            if GPIO.input(7):
+                # supposing z
+                self.motors["z"]["position"] = 0
                 break
 
-            self.send_step_pulse(self.motors[motor]["pins"][1])
+            self.send_pulse(self.motors[motor]["pins"][1])
 
             while GPIO.input(1):
                 # open door or from the interface
                 time.sleep(0.000005)
                 GPIO.output(self.driller, False)
 
-    def start_position(self):
-        self.move_engine(1000, not self.direc_z, "z")
-        self.move_engine(10000, not self.direc_x, "x")
-        self.move_engine(10000, not self.direc_y, "y")
+    def go_default_position(self):
+        pulses_z, direction_z = self.get_pulses_direction("z", -10000)
+        self.move_motor(pulses_z, direction_z, "z")
+        pulses_x, direction_x = self.get_pulses_direction("x", -10000)
+        self.move_motor(pulses_x, direction_x, "x")
+        pulses_y, direction_y = self.get_pulses_direction("y", -10000)
+        self.move_motor(pulses_y, direction_y, "y")
 
 
-    def home(self):
+    def go_home(self):
         # position for taking the photo
-        self.move_engine(10000, not self.direc_z, "z")
-        self.move_engine(14000,not self.direc_x, "x")
-        self.move_engine(14000,not self.direc_y, "y")
+        pulses_z, direction_z = self.get_pulses_direction("z", 0)
+        self.move_motor(pulses_z, direction_z, "z")
+        pulses_x, direction_x = self.get_pulses_direction("x", 0)
+        self.move_motor(pulses_x, direction_x, "x")
+        pulses_y, direction_y = self.get_pulses_direction("y", 0)
+        self.move_motor(pulses_y, direction_y, "y")
 
     def set_table_height(self, direction):
         if direction == "raise":
-            self.move_engine(1000, True, "table")
+            self.move_motor(1000, True, "table")
         elif direction == "down":
-            self.move_engine(1000, False, "table")
+            self.move_motor(1000, False, "table")
 
-    def set_engine_z_height(self, direction):
+    def set_motor_z_height(self, direction):
         if direction == "raise":
-            self.move_engine(5000, True, "z")
+            self.move_motor(5000, True, "z")
         elif direction == "down":
-            self.move_engine(5000, False, "z")
+            self.move_motor(5000, False, "z")
 
-    def move_x_y(self, pulsos_x, coordenada_x, pulsos_y, coordenada_y):
-        #
-        self.move_engine(pulsos_x, coordenada_x, "x")
-        self.move_engine(pulsos_y, coordenada_y, "y")
+    def move_x_y(self, pulses_x, direction_x, pulses_y, direction_y):
+        self.move_motor(pulses_x, direction_x, "x")
+        self.move_motor(pulses_y, direction_y, "y")
 
     def drill(self):
-        self.move_engine(1500, True, "z")
-        self.move_engine(1500, False, "z")
+        self.move_motor(1500, True, "z")
+        self.move_motor(1500, False, "z")
 
     def set_grabber(self, width, grab=True):
         if grab:
             # TODO: convert width to pulses
-            self.move_engine(width_pulses, True, "pistons")
+            self.move_motor(width_pulses, True, "pistons")
         if not grab:
-            self.move_engine(width_pulses, False, "pistons")
+            self.move_motor(width_pulses, False, "pistons")
 
     def move_y_to_user(self):
-        actual_y = self.motors["y"]["position"]
-        pulses = 10000 - actual_y
+        pulses, direction = self.get_pulses_direction("y", 10000)
+        self.move_motor(pulses, direction, "y")
+
+    def get_pulses_direction(self, motor, destination):
+        actual_y = self.motors[motor]["position"]
+        pulses = destination - actual_y
         direction = True
         if pulses < 0:
             direction = False
-        self.move_engine(abs(pulses), direction, "y")
+        return abs(pulses), direction
 
