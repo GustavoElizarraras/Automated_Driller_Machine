@@ -43,33 +43,33 @@ def mandar_pulso(pwm_pin):
     GPIO.output(pwm_pin, False)
     time.sleep(0.00025)
 
-def mover_motor(pulsos,direcc,motor):
+def mover_motor(pulsos,direcc,motor:str, ctrx):
+    # cuanto se movió
     ctr=0
     GPIO.output(motor[0], direcc)
     for i in range(pulsos):
         mandar_pulso(motor[1])
+        mandar_pulso(motores[motor]["pines"][1])
         if direcc:
             ctr=ctr+1
         else:
             ctr=ctr-1
-        if GPIO.input(25) or GPIO.input(8) or GPIO.input(7):
-
-            return ctr
+        # finales de carrera
+        if GPIO.input(25) or GPIO.input(8) or GPIO.input(7) or motores[motor]["contador"] < 0 or motores[motor]["contador"] > 1e10:
+            return
         while GPIO.input(1):
             time.sleep(0.000005)
             GPIO.output(Taladro,False)
-    return ctr
+    return
 
 def inicio():
-
+    # siempre que se encienda, ceros, chocar final de carrera
     mover_motor(10000,not direc_z,motor_z)
-    mover_motor(200,direc_z,motor_z)
 
     mover_motor(10000,not direc_x,motor_x)
-    mover_motor(200,direc_x,motor_x)
 
     mover_motor(10000,not direc_y,motor_y)
-    mover_motor(9000,direc_y,motor_y)
+
 
     crtpm += crtpm+mover_motor(1000,direc_mesa,motor_mesa)
 
@@ -77,10 +77,12 @@ def sujecion(ancho):
     ctrp += mover_motor(ancho,direc_pistones,motor_pistones)
 
 def home():
+    # nueva placa, toma foto
     mover_motor(10000,not direc_z,motor_z)
     ctrz += mover_motor(200,direc_z,motor_z)
 
     mover_motor(14000,not direc_x,motor_x)
+    #enmedio
     ctrx += mover_motor(5350,direc_x,motor_x)
 
     mover_motor(14000,not direc_y,motor_y)
@@ -104,7 +106,7 @@ def Barrenar():
 def Z_Home():
     ctrz += mover_motor(5000,not direc_z,motor_z)
     GPIO.output(Taladro,False)
-   
+
 def Asciende_mesa():
     ctrm += mover_motor(1000,direc_mesa,motor_mesa)
 
@@ -112,7 +114,8 @@ def liberar():
     ctrp += mover_motor(ctrp,not direc_pistones,motor_pistones)
 
 def Y_Usuario():
-    ctry += mover_motor(10000-ctry,direc_y,motor_y)    
+    #pone placa
+    ctry += mover_motor(10000-ctry,direc_y,motor_y)
 
 
 
