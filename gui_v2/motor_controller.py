@@ -24,7 +24,7 @@ class PinsSetup():
 class MotorController(PinsSetup):
     def __init__(self):
         super().__init__()
-
+        # True - al fin de carrera
         self.motors = {
             "x" : {"pins": [3, 2], "position": 0},
             "y" : {"pins": [14, 4], "position": 0},
@@ -37,19 +37,19 @@ class MotorController(PinsSetup):
     def send_pulse(self, pwm_pin):
         # 1KHz
         GPIO.output(pwm_pin, False)
-        time.sleep(0.00025)
+        time.sleep(0.000125)
         GPIO.output(pwm_pin, True)
-        time.sleep(0.0005)
-        GPIO.output(pwm_pin, False)
         time.sleep(0.00025)
+        GPIO.output(pwm_pin, False)
+        time.sleep(0.000125)
 
-    def move_motor(self, pulses, direcc, motor):
+    def move_motor(self, pulses, direction, motor):
 
-        GPIO.output(self.motors[motor]["pins"][0], direcc)
+        GPIO.output(self.motors[motor]["pins"][0], direction)
 
         for _ in range(pulses):
 
-            if direcc:
+            if direction:
                 self.motors[motor]["position"] += 1
             else:
                 self.motors[motor]["position"] -= 1
@@ -59,14 +59,17 @@ class MotorController(PinsSetup):
 
             if GPIO.input(25):
                 # supposing x
+                self.rebound_limit_switch("x")
                 self.motors["x"]["position"] = 0
                 break
             if GPIO.input(8):
                 # supposing y
+                self.rebound_limit_switch("y")
                 self.motors["y"]["position"] = 0
                 break
             if GPIO.input(7):
                 # supposing z
+                self.rebound_limit_switch("z")
                 self.motors["z"]["position"] = 0
                 break
 
@@ -77,29 +80,34 @@ class MotorController(PinsSetup):
                 time.sleep(0.000005)
                 GPIO.output(self.driller, False)
 
+    def rebound_limit_switch(self, motor):
+        GPIO.output(self.motors[motor]["pins"][0], False)
+        for _ in range(20):
+            self.send_pulse(self.motors[motor]["pins"][1])
+
     def go_default_position(self):
-        pulses_z, direction_z = self.get_pulses_direction("z", -10000)
+        pulses_z, direction_z = self.get_pulses_and_direction("z", -10000)
         self.move_motor(pulses_z, direction_z, "z")
-        pulses_x, direction_x = self.get_pulses_direction("x", -10000)
+        pulses_x, direction_x = self.get_pulses_and_direction("x", -10000)
         self.move_motor(pulses_x, direction_x, "x")
-        pulses_y, direction_y = self.get_pulses_direction("y", -10000)
+        pulses_y, direction_y = self.get_pulses_and_direction("y", -10000)
         self.move_motor(pulses_y, direction_y, "y")
 
 
     def go_home(self):
         # position for taking the photo
-        pulses_z, direction_z = self.get_pulses_direction("z", 0)
+        pulses_z, direction_z = self.get_pulses_and_direction("z", 0)
         self.move_motor(pulses_z, direction_z, "z")
-        pulses_x, direction_x = self.get_pulses_direction("x", 0)
+        pulses_x, direction_x = self.get_pulses_and_direction("x", 0)
         self.move_motor(pulses_x, direction_x, "x")
-        pulses_y, direction_y = self.get_pulses_direction("y", 0)
+        pulses_y, direction_y = self.get_pulses_and_direction("y", 0)
         self.move_motor(pulses_y, direction_y, "y")
 
     def set_table_height(self, direction):
         if direction == "raise":
-            self.move_motor(1000, True, "table")
-        elif direction == "down":
             self.move_motor(1000, False, "table")
+        elif direction == "down":
+            self.move_motor(1000, True, "table")
 
     def set_motor_z_height(self, direction):
         if direction == "raise":
@@ -118,19 +126,19 @@ class MotorController(PinsSetup):
     def set_grabber(self, width, grab=True):
         if grab:
             # TODO: convert width to pulses
-            self.move_motor(width_pulses, True, "pistons")
-        if not grab:
             self.move_motor(width_pulses, False, "pistons")
+        if not grab:
+            self.move_motor(width_pulses, True, "pistons")
 
     def move_y_to_user(self):
-        pulses, direction = self.get_pulses_direction("y", 10000)
+        pulses, direction = self.get_pulses_and_direction("y", 10000)
         self.move_motor(pulses, direction, "y")
 
-    def get_pulses_direction(self, motor, destination):
+    def get_pulses_and_direction(self, motor, destination):
         actual_y = self.motors[motor]["position"]
         pulses = destination - actual_y
-        direction = True
+        direction = False
         if pulses < 0:
-            direction = False
+            direction = True
         return abs(pulses), direction
 
