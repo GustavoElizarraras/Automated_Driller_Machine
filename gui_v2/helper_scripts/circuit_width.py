@@ -43,14 +43,6 @@ for points in lines:
         pmin = (xmin, y1)
     if x2 > xmax:
         xmax = x2
-    # Draw the lines joing the points
-    # On the original image
-#    cv2.line(img_array,(x1,y1),(x2,y2),(0,255,0),2)
-    # Maintain a simples lookup list for points
-#    lines_list.append([(x1,y1),(x2,y2)])
-
-cv2.line(img_array,pmin,(xmax, pmin[1]),(0,255,0),1)
-print(x2-x1)
 
 f, h = cv2.findContours(canny, cv2.RETR_TREE,  cv2.CHAIN_APPROX_SIMPLE)
 canny3d = cv2.merge([canny, canny, canny])
