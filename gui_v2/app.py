@@ -1,4 +1,5 @@
 #from picamera import PiCamera
+import motor_controller as mc
 import tkinter as tk
 from tkinter import ttk
 from functools import partial
@@ -11,51 +12,113 @@ import glob
 import time
 import re
 
-class PiCameraPhoto(ttk.Frame):
-    def __init__(self, container, dir):
-        super().__init__(container)
-        self.container = container
-        self.create_widgets()
+class PiCameraPhoto():
+    def __init__(self):
         self.camera = PiCamera()
         self.camera.resolution = (2592, 1944)
-        self.dir = dir
+        self.dir = "/home/pi/Documents/pcb_images/"
         self.last_img_path = self.get_last_file_dir()
-        print(self.last_img_path)
         self.img_name = self.get_img_name(self.last_img_path)
-        self.take_photo()
+        self.new_img_path = self.dir + self.img_name
 
     def take_photo(self):
-        label = tk.Label(self.container, text= "Tomando foto")
-        label.place(x = 380, y=150)
         self.camera.start_preview()
         # Camera warm-up time
         time.sleep(2)
-        self.camera.capture(self.dir + self.img_name)
+        self.camera.capture(self.new_img_path)
         self.camera.stop_preview()
-        time.sleep(2)
-        self.display_binarizing_panel()
+        time.sleep(1)
 
     def get_last_file_dir(self):
-        list_of_files = glob.glob(self.dir + "*")
+        list_of_files = glob.glob(self.dir + "*.jpg")
         latest_file = max(list_of_files, key=os.path.getctime)
         return latest_file
 
     def get_img_name(self, img_path_name):
         last_img = img_path_name[-11:-1]
         last_img_num = re.findall(r'\d+', last_img)
-        print(last_img_num, type(last_img_num))
         img_name = "img_" + str(int(last_img_num[-1]) + 1) + ".jpg"
         return img_name
 
+class ImagePreprocessing():
+    def preprocess(self, img_path, position):
+        img_array = cv2.imread(img_path, 0)
+        image_center = tuple(np.array(img_array.shape[1::-1]) / 2)
+        rot_mat = cv2.getRotationMatrix2D(image_center, -3.4, 1.0)
+        img_array = cv2.warpAffine(img_array, rot_mat, img_array.shape[1::-1], flags=cv2.INTER_LINEAR)
+        # TODO: change to the photo position in y_user
+        if position == "y_user":
+            img_array = img_array[515:1465, 600:1550]
+        elif position == "home":
+            # this one is correct
+            img_array = img_array[515:1465, 600:1550]
+        img_array = cv2.resize(img_array, (640, 640), interpolation= cv2.INTER_LINEAR)
+        img_array_3D = cv2.merge([np.asarray(self.img_array), np.asarray(self.img_array), np.asarray(self.img_array)])
+        return img_array_3D
+
+class CalculateWidth(ttk.Frame):
+    def __init__(self, container, img_name):
+        super().__init__(container)
+        self.motor_controller = mc.MotorController()
+        self.img_array = None
+        self.img_name = img_name
+        self.pi_camera = PiCameraPhoto()
+        self.img_path = self.picamera.new_img_path()
+
     def create_widgets(self):
         self.instructions = tk.Text(self.master, height=1, width=70)
-        text='Una vez que la placa esté fijada, presione el botón "Tomar Foto"'
+        text = 'Coloque la placa en el centro de la mesa y presione el botón "Sujetar PCB"'
         self.instructions.insert("e", text)
         self.instructions.place(x = 200, y = 100)
-        # button
-        self.start_button = ttk.Button(self.container, text='Tomar foto')
+        # grab button
+        self.start_button = ttk.Button(self.container, text='Sujetar PCB')
         self.start_button.place(x = 390, y = 130)
-        self.start_button.configure(command=self.take_photo)
+        self.start_button.configure(command=self.do_sequence)
+        # grab harder button
+        self.start_button = ttk.Button(self.container, text='Incrementar presión')
+        self.start_button.place(x = 390, y = 130)
+        self.start_button.configure(command=self.do_sequence)
+        # release grabber button
+        self.start_button = ttk.Button(self.container, text='Liberar presión')
+        self.start_button.place(x = 390, y = 130)
+        self.start_button.configure(command=self.do_sequence)
+        # Go to Controller Frame
+        self.start_button = ttk.Button(self.container, text='Liberar presión')
+        self.start_button.place(x = 390, y = 130)
+        self.start_button.configure(command=self.do_sequence)
+
+    def get_pcb_width(self):
+        _, self.img_array = cv2.threshold(self.img_array, 152 , 255, cv2.THRESH_BINARY)
+        self.img_array = cv2.erode(self.img_array, (41,41), iterations = 1)
+        canny = cv2.Canny(self.img_array, 160, 255, 1)
+        lines = cv2.HoughLinesP(
+                    canny, # Input edge image
+                    2, # Distance resolution in pixels
+                    np.pi/180, # Angle resolution in radians
+                    threshold=75, # Min number of votes for valid line
+                    minLineLength=5, # Min allowed length of line
+                    maxLineGap=100 # Max allowed gap between line for joining them
+                    )
+        xmax = 0
+        xmin = 1000
+        # Iterate over points
+        for points in lines:
+            # Extracted points nested in the list
+            x1, _, x2, _ = points[0]
+            if x1 < xmin:
+                xmin = x1
+            if x2 > xmax:
+                xmax = x2
+        return x2 - x1
+
+    def do_sequence(self):
+        # TODO: finish sequence with pulses
+        self.motor_controller.move_y_to_user()
+        self.pi_camera.take_photo()
+        self.preprocessed_img = ImagePreprocessing().preprocess(self.img_path, "y_user")
+        width = self.get_pcb_width()
+        self.motor_controller.set_grabber(width, grab=True)
+
 
     def display_binarizing_panel(self):
         for widget in self.container.winfo_children():
@@ -101,7 +164,7 @@ class BinarizingFrame(ttk.Frame):
         self.slider2.bind("<ButtonRelease-1>", self.dilate)
         self.slider2.place(x=700, y=150)
 
-        self.slider3 = tk.Scale(self.container, from_=0, to=5, orient="horizontal")
+        self.slider3 = tk.Scale( detectself.container, from_=0, to=5, orient="horizontal")
         self.slider3.bind("<ButtonRelease-1>", self.erode)
         self.slider3.place(x=700, y=200)
 
