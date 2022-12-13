@@ -58,13 +58,31 @@ class ImagePreprocessing():
 
 class CalculateWidth(ttk.Frame):
     def __init__(self, container, img_name):
+        """
+        This class implements the following behaviour in the machine:
+            1.- Move table to user
+            2.- User puts the circuit board
+            3.- User press button to grab the PCB
+                3.1.1 .- Gets the width of the table using computer vision
+            4.- Grab the PCB
+            5.- Table down
+            6.- Be able to grab it harder or release it
+            7.- Display control frame while going home
+        """
         super().__init__(container)
         self.img_array = None
         self.img_name = img_name
         self.pi_camera = PiCameraPhoto()
         self.img_path = self.picamera.new_img_path()
+        motor_controller.move_y_to_user()
+        # table up
+        motor_controller.move_motor(300, False, "table")
 
     def create_widgets(self):
+        # release or grab harder methods
+        self.release = partial(self.adjust_grab, "release")
+        self.grab_harder = partial(self.adjust_grab, "harder")
+
         self.instructions = tk.Text(self.master, height=1, width=70)
         text = 'Coloque la placa en el centro de la mesa y presione el botón "Sujetar PCB"'
         self.instructions.insert("e", text)
@@ -75,16 +93,16 @@ class CalculateWidth(ttk.Frame):
         self.start_button.configure(command=self.do_sequence)
         # grab harder button
         self.start_button = ttk.Button(self.container, text='Incrementar presión')
-        self.start_button.place(x = 390, y = 130)
-        self.start_button.configure(command=self.do_sequence)
+        self.start_button.place(x = 390, y = 440)
+        self.start_button.configure(command=self.grab_harder)
         # release grabber button
         self.start_button = ttk.Button(self.container, text='Liberar presión')
-        self.start_button.place(x = 390, y = 130)
-        self.start_button.configure(command=self.do_sequence)
+        self.start_button.place(x = 390, y = 470)
+        self.start_button.configure(command=self.release)
         # Go to Controller Frame
-        self.start_button = ttk.Button(self.container, text='Liberar presión')
-        self.start_button.place(x = 390, y = 130)
-        self.start_button.configure(command=self.do_sequence)
+        self.start_button = ttk.Button(self.container, text='Detectar barrenos')
+        self.start_button.place(x = 390, y = 515)
+        self.start_button.configure(command=self.display_control_panel_panel)
 
     def get_pcb_width(self):
         _, self.img_array = cv2.threshold(self.img_array, 152 , 255, cv2.THRESH_BINARY)
@@ -112,17 +130,26 @@ class CalculateWidth(ttk.Frame):
 
     def do_sequence(self):
         # TODO: finish sequence with pulses
-        motor_controller.move_y_to_user()
         self.pi_camera.take_photo()
-        self.preprocessed_img = ImagePreprocessing().preprocess(self.img_path, "y_user")
-        width = self.get_pcb_width()
-        motor_controller.set_grabber(width, grab=True)
+        self.img_array = ImagePreprocessing().preprocess(self.img_path, "y_user")
+        width_px = self.get_pcb_width()
+        pulses = mc.convert_pixels_to_pulses(width_px, "pistons")
+        motor_controller.set_grabber(pulses, grab=True)
+        # table down
+        motor_controller.move_motor(300, True, "table")
 
+    def adjust_grab(self, grab):
+        if grab == "release":
+            # 0.5 mm
+            motor_controller.move_motor(50, True, "pistons")
+        else:
+            motor_controller.move_motor(50, False, "pistons")
 
-    def display_binarizing_panel(self):
+    def display_control_panel_panel(self):
+        motor_controller.go_home()
         for widget in self.container.winfo_children():
             widget.destroy()
-        frame = BinarizingFrame(self.container, self.img_name)
+        frame = ControlFrame(self.container, self.img_name)
         frame.tkraise()
 
 class ImageInitializer(ttk.Frame):
@@ -140,15 +167,7 @@ class ImageInitializer(ttk.Frame):
         # PCB Image
 
         # gray image of the pcb that takes the camera
-        self.img_array = cv2.imread(self.img_path, 0)
-        image_center = tuple(np.array(self.img_array.shape[1::-1]) / 2)
-        rot_mat = cv2.getRotationMatrix2D(image_center, -3.4, 1.0)
-        self.img_array = cv2.warpAffine(self.img_array, rot_mat, self.img_array.shape[1::-1], flags=cv2.INTER_LINEAR)
-        self.img_array = self.img_array[515:1465, 600:1550]
-        self.img_array = cv2.resize(self.img_array, (640, 640), interpolation= cv2.INTER_LINEAR)
-        _, self.img_array = cv2.threshold(self.img_array, 197 , 255, cv2.THRESH_BINARY)
-        self.img_array = cv2.merge([np.asarray(self.img_array), np.asarray(self.img_array), np.asarray(self.img_array)])
-
+        self.img_array = ImagePreprocessing().preprocess(self.img_path, "y_user")
         # List of coordinates (dummy for now)
         if coords is None:
             coords_center_obj = ProcessPinHolesCenters(self.img_array, [0, 0, 5, 5])

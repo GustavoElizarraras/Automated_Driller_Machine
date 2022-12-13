@@ -26,11 +26,11 @@ class MotorController(PinsSetup):
         super().__init__()
         # True - al fin de carrera
         self.motors = {
-            "x" : {"pins": [3, 2], "position": 0},
-            "y" : {"pins": [14, 4], "position": 0},
-            "z" : {"pins": [18, 15], "position": 0},
-            "table" : {"pins": [27, 17], "position": 0},
-            "pistons" : {"pins": [23, 22], "position": 0},
+            "x" : {"pins": [15, 14], "position": 0},
+            "y" : {"pins": [2, 18], "position": 0},
+            "z" : {"pins": [4, 3], "position": 0},
+            "table" : {"pins": [24, 23], "position": 0},
+            "pistons" : {"pins": [17, 25], "position": 0},
             "driller": 14
         }
 
@@ -57,18 +57,19 @@ class MotorController(PinsSetup):
             if  self.motors[motor]["position"] > 1e4:
                 break
 
-            if GPIO.input(25):
-                # supposing x
+            if GPIO.input(7):
+                # door
+                break
+
+            if GPIO.input(22):
                 self.rebound_limit_switch("x")
                 self.motors["x"]["position"] = 0
                 break
-            if GPIO.input(8):
-                # supposing y
+            if GPIO.input(10):
                 self.rebound_limit_switch("y")
                 self.motors["y"]["position"] = 0
                 break
-            if GPIO.input(7):
-                # supposing z
+            if GPIO.input(9):
                 self.rebound_limit_switch("z")
                 self.motors["z"]["position"] = 0
                 break
@@ -123,9 +124,9 @@ class MotorController(PinsSetup):
         self.move_motor(1500, True, "z")
         self.move_motor(1500, False, "z")
 
-    def set_grabber(self, width, grab=True):
+    def set_grabber(self, width_pulses, grab=True):
         if grab:
-            # TODO: convert width to pulses
+            # TODO: convert width to pulses (?) try out if it works
             self.move_motor(width_pulses, False, "pistons")
         if not grab:
             self.move_motor(width_pulses, True, "pistons")
@@ -133,6 +134,16 @@ class MotorController(PinsSetup):
     def move_y_to_user(self):
         pulses, direction = self.get_pulses_and_direction("y", 10000)
         self.move_motor(pulses, direction, "y")
+
+    def convert_pixels_to_pulses(self, pixels, motor):
+        # for x and y motors, 50 pulses = 1mm
+        # for other motors, 100 pulses = 1mm
+        # 5.4 is a hardcoded unit conversor (px/mm), 4.92 should be the real value
+        if motor == "y" or motor == "x":
+            pulses = int((pixels / 5.4 ) * 50)
+        else:
+            pulses = int((pixels / 5.4 ) * 100)
+        return pulses
 
     def get_pulses_and_direction(self, motor, destination):
         actual_y = self.motors[motor]["position"]
