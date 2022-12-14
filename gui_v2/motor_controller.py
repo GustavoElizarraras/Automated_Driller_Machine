@@ -7,8 +7,8 @@ class PinsSetup():
         # Instead of physical pin numbers
         GPIO.setmode(GPIO.BCM)
         # Define GPIO signals to use Pins
-        self.output_pins = [2,3,4,14,15,18,17,27,22,23,24]
-        self.input_pins = [25,8,7,1]
+        self.output_pins = [2, 3, 4, 14, 15, 18, 17, 23, 24, 25, 27]
+        self.input_pins = [22, 10, 9, 7]
         # Set all pins as output and input
         GPIO.setwarnings(False)
         self.setup_pins()
@@ -31,7 +31,7 @@ class MotorController(PinsSetup):
             "z" : {"pins": [4, 3], "position": 0},
             "table" : {"pins": [24, 23], "position": 0},
             "pistons" : {"pins": [17, 25], "position": 0},
-            "driller": 14
+            "driller": 27
         }
 
     def send_pulse(self, pwm_pin):
@@ -83,13 +83,13 @@ class MotorController(PinsSetup):
 
     def rebound_limit_switch(self, motor):
         GPIO.output(self.motors[motor]["pins"][0], False)
-        for _ in range(20):
+        for _ in range(25):
             self.send_pulse(self.motors[motor]["pins"][1])
 
     def go_default_position(self):
-        pulses_z, direction_z = self.get_pulses_and_direction("z", -10000)
+        pulses_z, direction_z = self.get_pulses_and_direction("z", -2000)
         self.move_motor(pulses_z, direction_z, "z")
-        pulses_x, direction_x = self.get_pulses_and_direction("x", -10000)
+        pulses_x, direction_x = self.get_pulses_and_direction("x", -6000)
         self.move_motor(pulses_x, direction_x, "x")
         pulses_y, direction_y = self.get_pulses_and_direction("y", -10000)
         self.move_motor(pulses_y, direction_y, "y")
