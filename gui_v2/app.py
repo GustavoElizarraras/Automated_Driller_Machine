@@ -1,4 +1,5 @@
 #from picamera import PiCamera
+from tflite_runtime.interpreter import Interpreter
 import motor_controller as mc
 import tkinter as tk
 from tkinter import ttk
@@ -162,13 +163,13 @@ class ImageInitializer(ttk.Frame):
 
         # Hardcoded path, to remove later
         self.img_path = "gui_v2/good_img.jpg"
-        # self.img_path = os.getcwd() + "/dataset/useful_handpicked_rot/12300111_temp_2.jpg"
-        # self.img_path = self.get_last_img_dir()
         # PCB Image
 
         # gray image of the pcb that takes the camera
         self.img_array = ImagePreprocessing().preprocess(self.img_path, "y_user")
-        # List of coordinates (dummy for now)
+
+        self.pin_holes = ProcessPinHolesCenters(self.img_array)
+
         if coords is None:
             coords_center_obj = ProcessPinHolesCenters(self.img_array, [0, 0, 5, 5])
             #coords_center_obj = ProcessPinHolesCenters(self.img_array, [84,555,58,529,83,474,57,448,83,392,57,366,84,312,58,286,83,230,57,204,84,150,58,124,84,68,58,42])
@@ -394,14 +395,40 @@ class DeletePCBHole(ImageInitializer):
         frame.tkraise()
 
 class ProcessPinHolesCenters():
-    def __init__(self, img, raw_coords):
+    def __init__(self, img):
         self.img = img
         self.one_channel, _, _ = cv2.split(self.img)
-        self.image_bin_not = cv2.bitwise_not(self.one_channel)
-        #self.image_bin_not = cv2.bitwise_not(self.img)
-        self.raw_coords = raw_coords
+        self.predictions = None
+        self.raw_coords = []
         self.coords_processed = []
         self.get_img_coords()
+
+    def predict_cnn(self):
+        self.model_path = "./model_original_idea_best.tflite"
+        self.interpreter = Interpreter(self.model_path)
+        self.interpreter.allocate_tensors()
+
+        input_details = self.interpreter.get_input_details()
+        output_details = self.interpreter.get_output_details()
+
+        self.interpreter.set_tensor(input_details[0]['index'], self.one_channel)
+        self.interpreter.invoke()
+        self.predictions = self.interpreter.get_tensor(output_details[0]['index'])
+
+    def transform_predictions_to_coords(self):
+        threshold = 0.5
+        GRID_SIZE = 8
+        for mx in range(80):
+            for my in range(80):
+                channels = self.predictions[my][mx]
+                prob, x1, y1, x2, y2 = channels
+                if prob >= threshold:
+                    px1, py1 = (mx * GRID_SIZE) + x1, (my * GRID_SIZE) + y1
+                    px2, py2 = (mx * GRID_SIZE) + x2, (my * GRID_SIZE) + y2
+                    self.raw_coords.append(px1)
+                    self.raw_coords.append(py1)
+                    self.raw_coords.append(px2)
+                    self.raw_coords.append(py2)
 
     def get_img_coords(self):
         for i in range(0, len(self.raw_coords), 4):
