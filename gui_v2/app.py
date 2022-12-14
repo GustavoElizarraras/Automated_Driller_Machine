@@ -18,7 +18,7 @@ class PiCameraPhoto():
         self.camera = PiCamera()
         self.camera.resolution = (2592, 1944)
         self.dir = "/home/pi/Documents/pcb_images/"
-        self.last_img_path = self.get_last_file_dir()
+        self.last_img_path = self.get_last_img_dir()
         self.img_name = self.get_img_name(self.last_img_path)
         self.new_img_path = self.dir + self.img_name
 
@@ -30,7 +30,7 @@ class PiCameraPhoto():
         self.camera.stop_preview()
         time.sleep(1)
 
-    def get_last_file_dir(self):
+    def get_last_img_dir(self):
         list_of_files = glob.glob(self.dir + "*.jpg")
         latest_file = max(list_of_files, key=os.path.getctime)
         return latest_file
@@ -154,37 +154,25 @@ class CalculateWidth(ttk.Frame):
         frame.tkraise()
 
 class ImageInitializer(ttk.Frame):
-    def __init__(self, container, coords=None):
+    def __init__(self, container):
         super().__init__(container)
         self.container = container
 
-        self.dir = "/home/pi/Documents/pcb_images/"
-        #self.img_path = self.get_last_img_dir()
-
         # Hardcoded path, to remove later
         self.img_path = "gui_v2/good_img.jpg"
-        # PCB Image
 
+        self.pi_camera = PiCameraPhoto()
+        self.img_path = self.picamera.new_img_path()
+        # PCB Image
         # gray image of the pcb that takes the camera
         self.img_array = ImagePreprocessing().preprocess(self.img_path, "y_user")
-
         self.pin_holes = ProcessPinHolesCenters(self.img_array)
-
-        if coords is None:
-            coords_center_obj = ProcessPinHolesCenters(self.img_array, [0, 0, 5, 5])
-            #coords_center_obj = ProcessPinHolesCenters(self.img_array, [84,555,58,529,83,474,57,448,83,392,57,366,84,312,58,286,83,230,57,204,84,150,58,124,84,68,58,42])
-            self.coords = coords_center_obj.coords_processed
-        else:
-            self.coords = coords
+        self.coords = self.pin_holes.coords_processed
 
         # pin-holes identifiers
         self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
         self.show_green_holes()
 
-    def get_last_img_dir(self):
-        list_of_files = glob.glob(self.dir + "*.jpg")
-        latest_file = max(list_of_files, key=os.path.getctime)
-        return latest_file
 
     def render_img(self, img_array, binding=None):
         self.render = ImageTk.PhotoImage(Image.fromarray(img_array))
@@ -398,9 +386,12 @@ class ProcessPinHolesCenters():
     def __init__(self, img):
         self.img = img
         self.one_channel, _, _ = cv2.split(self.img)
+        self.image_bin_not = cv2.bitwise_not(self.one_channel)
         self.predictions = None
         self.raw_coords = []
         self.coords_processed = []
+        self.predict_cnn()
+        self.transform_predictions_to_coords()
         self.get_img_coords()
 
     def predict_cnn(self):
