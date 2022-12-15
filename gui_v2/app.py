@@ -42,7 +42,10 @@ class PiCameraPhoto():
         return img_name
 
 class ImagePreprocessing():
-    def preprocess(self, img_path, position):
+    def __init__(self):
+        pass
+
+    def __call__(self, img_path, position):
         img_array = cv2.imread(img_path, 0)
         image_center = tuple(np.array(img_array.shape[1::-1]) / 2)
         rot_mat = cv2.getRotationMatrix2D(image_center, -3.4, 1.0)
@@ -58,7 +61,7 @@ class ImagePreprocessing():
         return img_array_3D
 
 class CalculateWidth(ttk.Frame):
-    def __init__(self, container, img_name):
+    def __init__(self, container):
         """
         This class implements the following behaviour in the machine:
             1.- Move table to user
@@ -71,10 +74,11 @@ class CalculateWidth(ttk.Frame):
             7.- Display control frame while going home
         """
         super().__init__(container)
+        self.container = container
         self.img_array = None
-        self.img_name = img_name
         self.pi_camera = PiCameraPhoto()
-        self.img_path = self.picamera.new_img_path()
+        self.img_path = self.pi_camera.new_img_path()
+        self.create_widgets()
         motor_controller.go_default_position()
         motor_controller.move_y_to_user()
         # table up
@@ -133,7 +137,7 @@ class CalculateWidth(ttk.Frame):
     def do_sequence(self):
         # TODO: finish sequence with pulses
         self.pi_camera.take_photo()
-        self.img_array = ImagePreprocessing().preprocess(self.img_path, "y_user")
+        self.img_array = ImagePreprocessing()(self.img_path, "y_user")
         width_px = self.get_pcb_width()
         pulses = mc.convert_pixels_to_pulses(width_px, "pistons")
         motor_controller.set_grabber(pulses, grab=True)
@@ -166,7 +170,7 @@ class ImageInitializer(ttk.Frame):
         self.img_path = self.picamera.new_img_path()
         # PCB Image
         # gray image of the pcb that takes the camera
-        self.img_array = ImagePreprocessing().preprocess(self.img_path, "y_user")
+        self.img_array = ImagePreprocessing()(self.img_path, "y_user")
         self.pin_holes = ProcessPinHolesCenters(self.img_array)
         self.coords = self.pin_holes.coords_processed
 

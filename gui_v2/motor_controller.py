@@ -7,7 +7,7 @@ class PinsSetup():
         # Instead of physical pin numbers
         GPIO.setmode(GPIO.BCM)
         # Define GPIO signals to use Pins
-        self.output_pins = [2, 3, 4, 14, 15, 18, 17, 23, 24, 25, 27]
+        self.output_pins = [2, 3, 4, 14, 15, 18, 17, 20, 21, 25, 27]
         self.input_pins = [22, 11, 10, 9]
         # Set all pins as output and input
         GPIO.setwarnings(False)
@@ -23,7 +23,7 @@ class PinsSetup():
 
 class MotorController(PinsSetup):
     def __init__(self):
-        super().__init__()
+        super(self, MotorController).__init__()
         # True - al fin de carrera
         self.motors = {
             "x" : {"pins": [15, 14], "position": 0},
@@ -88,15 +88,10 @@ class MotorController(PinsSetup):
 
             self.send_pulse(self.motors[motor]["pins"][1], motor)
 
-            while GPIO.input(1):
-                # open door or from the interface
-                time.sleep(0.000005)
-                GPIO.output(self.driller, False)
-
     def rebound_limit_switch(self, motor):
         GPIO.output(self.motors[motor]["pins"][0], False)
-        for _ in range(25):
-            self.send_pulse(self.motors[motor]["pins"][1])
+        for _ in range(125):
+            self.send_pulse(self.motors[motor]["pins"][1], motor)
 
     def go_default_position(self):
         pulses_z, direction_z = self.get_pulses_and_direction("z", -2000)
