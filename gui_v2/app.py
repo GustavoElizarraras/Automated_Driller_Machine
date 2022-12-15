@@ -75,6 +75,7 @@ class CalculateWidth(ttk.Frame):
         self.img_name = img_name
         self.pi_camera = PiCameraPhoto()
         self.img_path = self.picamera.new_img_path()
+        motor_controller.go_default_position()
         motor_controller.move_y_to_user()
         # table up
         motor_controller.move_motor(300, False, "table")
@@ -466,6 +467,6 @@ if __name__ == "__main__":
 
     motor_controller = mc.MotorController()
     app = App()
-    ControlFrame(app)
+    CalculateWidth(app)
     # BinarizingFrame(app, "/home/pi/Documents/pcb_images/")
     app.mainloop()

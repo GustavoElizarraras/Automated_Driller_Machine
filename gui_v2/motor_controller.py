@@ -8,7 +8,7 @@ class PinsSetup():
         GPIO.setmode(GPIO.BCM)
         # Define GPIO signals to use Pins
         self.output_pins = [2, 3, 4, 14, 15, 18, 17, 23, 24, 25, 27]
-        self.input_pins = [22, 10, 9, 7]
+        self.input_pins = [22, 11, 10, 9]
         # Set all pins as output and input
         GPIO.setwarnings(False)
         self.setup_pins()
@@ -29,19 +29,28 @@ class MotorController(PinsSetup):
             "x" : {"pins": [15, 14], "position": 0},
             "y" : {"pins": [2, 18], "position": 0},
             "z" : {"pins": [4, 3], "position": 0},
-            "table" : {"pins": [24, 23], "position": 0},
+            "table" : {"pins": [20, 21], "position": 0},
             "pistons" : {"pins": [17, 25], "position": 0},
             "driller": 27
         }
 
-    def send_pulse(self, pwm_pin):
-        # 1KHz
-        GPIO.output(pwm_pin, False)
-        time.sleep(0.000125)
-        GPIO.output(pwm_pin, True)
-        time.sleep(0.00025)
-        GPIO.output(pwm_pin, False)
-        time.sleep(0.000125)
+    def send_pulse(self, pwm_pin, motor):
+        if motor == "pistons":
+            # 500
+            GPIO.output(pwm_pin, False)
+            time.sleep(0.005)
+            GPIO.output(pwm_pin, True)
+            time.sleep(0.01)
+            GPIO.output(pwm_pin, False)
+            time.sleep(0.005)
+        else:
+            # 1KHz
+            GPIO.output(pwm_pin, False)
+            time.sleep(0.000125)
+            GPIO.output(pwm_pin, True)
+            time.sleep(0.00025)
+            GPIO.output(pwm_pin, False)
+            time.sleep(0.000125)
 
     def move_motor(self, pulses, direction, motor):
 
@@ -54,10 +63,13 @@ class MotorController(PinsSetup):
             else:
                 self.motors[motor]["position"] -= 1
 
-            if  self.motors[motor]["position"] > 1e4:
+            if  self.motors["y"]["position"] > 1e4:
                 break
 
-            if GPIO.input(7):
+            if  self.motors["x"]["position"] > 7e3:
+                break
+
+            if GPIO.input(11):
                 # door
                 break
 
@@ -74,7 +86,7 @@ class MotorController(PinsSetup):
                 self.motors["z"]["position"] = 0
                 break
 
-            self.send_pulse(self.motors[motor]["pins"][1])
+            self.send_pulse(self.motors[motor]["pins"][1], motor)
 
             while GPIO.input(1):
                 # open door or from the interface
@@ -139,10 +151,12 @@ class MotorController(PinsSetup):
         # for x and y motors, 50 pulses = 1mm
         # for other motors, 100 pulses = 1mm
         # 5.4 is a hardcoded unit conversor (px/mm), 4.92 should be the real value
+
+        # TODO: Implent correctly the pulses for the drilling sequence
         if motor == "y" or motor == "x":
             pulses = int((pixels / 5.4 ) * 50)
-        else:
-            pulses = int((pixels / 5.4 ) * 100)
+        elif motor == "pistons":
+            pulses = int(130 - (pixels / 5.4 ) * 7)
         return pulses
 
     def get_pulses_and_direction(self, motor, destination):
