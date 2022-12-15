@@ -1,7 +1,6 @@
 import random
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
 import sys
 import os
 from data_augmentation.bbox_util import *
@@ -38,20 +37,23 @@ class RandomScale(object):
 
     """
 
-    def __init__(self, up = True):
-        self.up = up
+    def __init__(self):
+        pass
 
     def __call__(self, img, bboxes):
         #Chose a random digit to scale by
 
+        bboxes = np.array(bboxes).reshape((-1,4)).astype(np.float64)
+
         img_shape = img.shape
 
-        scale = random.uniform()
+        scale = random.uniform(0.2, 0.4)
+        up = random.randint(0, 1)
 
-        if self.up:
-            resize_scale = 0.4 + scale
+        if up == 1:
+            resize_scale = 1 + scale
         else:
-            resize_scale = 0.4 - scale
+            resize_scale = 1 - scale
 
         img =  cv2.resize(img, None, fx = resize_scale, fy = resize_scale)
 
@@ -67,7 +69,6 @@ class RandomScale(object):
 
         img = canvas
         bboxes = clip_box(bboxes, [0,0,1 + img_shape[1], img_shape[0]], 0.20)
-
 
         return img, bboxes
 

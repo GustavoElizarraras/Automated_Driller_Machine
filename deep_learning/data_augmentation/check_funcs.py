@@ -466,24 +466,34 @@ class Resize(object):
         bboxes = np.array(bboxes).reshape((-1,4)).astype(np.float64)
 
         w,h = img.shape[1], img.shape[0]
-
+        a = img.copy()
+        a = draw_rect(a, bboxes)
+        cv2.imshow("a", a.astype(np.uint8))
+        cv2.waitKey(0)
         img = letterbox_image(img, self.inp_dim)
-
-
-
+        cv2.imshow("ff", img.astype(np.uint8))
+        cv2.waitKey(0)
         scale = min(self.inp_dim/h, self.inp_dim/w)
-        bboxes[:,:4] *= (scale)
+
 
         new_w = scale*w
         new_h = scale*h
 
         del_h = (self.inp_dim - new_h)/2
         del_w = (self.inp_dim - new_w)/2
-
         add_matrix = np.array([[del_w, del_h, del_w, del_h]]).astype(int)
+        #bboxes[:,:4] += add_matrix
+        print(bboxes[:,:4][0])
+        bboxes[:,:4] *= (scale)
+        print(bboxes[:,:4][0])
+        #x = (self.inp_dim / 8) * scale
+        #add_matrix = np.array([[x,x,x,x]]).astype(int)
 
         bboxes = bboxes.astype(int)
-        bboxes[:,:4] += add_matrix
+        print(bboxes[:,:4][0])
+
+        bboxes = clip_box(bboxes, [0,0,w, h], 0.75)
+        print(bboxes[:,:4][0])
 
         img = img.astype(np.uint8)
         img = draw_rect(img, bboxes)
@@ -511,24 +521,93 @@ def letterbox_image(img, inp_dim):
 
     '''
 
-    inp_dim = (inp_dim, inp_dim)
     img_w, img_h = img.shape[1], img.shape[0]
-    w, h = inp_dim
-    new_w = int(img_w * min(w/img_w, h/img_h))
-    new_h = int(img_h * min(w/img_w, h/img_h))
-    resized_image = cv2.resize(img, (new_w,new_h))
 
-    canvas = np.full((img_h, img_w, 3), 0)
-    print(canvas.shape)
-    y_diff = h - new_h // 2
-    canvas[y_diff : img_h + ,(w-new_w)//2:(w-new_w)//2 + new_w,  :] = resized_image
+    canvas = np.zeros((img_h, img_w, 3))
+    resized_image = cv2.resize(img, (inp_dim, inp_dim ))
+    new = img_h - inp_dim
+    border = new // 2
+
+    if new < 0:
+        border = abs(new // 2)
+        # bigger size
+        canvas = resized_image[border:inp_dim-border, border:inp_dim-border]
+
+    else:
+        canvas[border:inp_dim+border, border:inp_dim+border] = resized_image
 
     return canvas
+
+
+
+class RandomScale(object):
+    """Randomly scales an image
+
+
+    Bounding boxes which have an area of less than 25% in the remaining in the
+    transformed image is dropped. The resolution is maintained, and the remaining
+    area if any is filled by black color.
+
+    Parameters
+    ----------
+    scale: float or tuple(float)
+        if **float**, the image is scaled by a factor drawn
+        randomly from a range (1 - `scale` , 1 + `scale`). If **tuple**,
+        the `scale` is drawn randomly from values specified by the
+        tuple
+
+    Returns
+    -------
+
+    numpy.ndaaray
+        Scaled image in the numpy format of shape `HxWxC`
+
+    numpy.ndarray
+        Tranformed bounding box co-ordinates of the format `n x 4` where n is
+        number of bounding boxes and 4 represents `x1,y1,x2,y2` of the box
+
+    """
+
+    def __init__(self):
+        pass
+
+    def __call__(self, img, bboxes):
+        #Chose a random digit to scale by
+        bboxes = np.array(bboxes).reshape((-1,4)).astype(np.float64)
+
+        img_shape = img.shape
+
+        scale = random.uniform(0.2, 0.4)
+        up = random.randint(0, 1)
+        if up == 1:
+            resize_scale = 1 + scale
+        else:
+            resize_scale = 1 - scale
+
+        img =  cv2.resize(img, None, fx = resize_scale, fy = resize_scale)
+
+        bboxes[:,:4] *= [resize_scale, resize_scale, resize_scale, resize_scale]
+        # bboxes[:,:4] *= resize_scale
+
+        canvas = np.zeros(img_shape, dtype = np.uint8)
+
+        y_lim = int(min(resize_scale, 1)*img_shape[0])
+        x_lim = int(min(resize_scale, 1)*img_shape[1])
+
+
+        canvas[:y_lim,:x_lim,:] = img[:y_lim,:x_lim,:]
+
+        img = canvas
+        bboxes = clip_box(bboxes, [0,0,1 + img_shape[1], img_shape[0]], 0.8)
+        img = draw_rect(img, bboxes)
+
+        return img, bboxes
+
 
 bboxes = [137,356,151,342,137,219,151,205,183,109,197,95,274,219,288,205,273,417,289,401,91,109,105,95,529,330,545,314,137,109,151,95,530,101,544,87,92,355,104,343,90,476,106,460,45,475,59,461,47,355,59,343,413,355,425,343,412,416,426,402,530,237,544,223,183,356,197,342,320,356,334,342,46,110,60,96,320,415,334,401,530,146,544,132,230,218,242,206,367,355,379,343,530,284,544,270,308,560,318,550,230,355,242,343,275,355,287,343,366,218,378,206,184,218,196,206,530,191,544,177,46,218,58,206,412,218,424,206,321,219,333,207,308,606,318,596,365,415,379,401,93,218,105,206,152,560,162,550,273,497,285,485,153,605,163,595,183,497,195,485]
 img = cv2.imread("deep_learning/data_augmentation/c22_0.jpg")
 
-for _ in range(2):
-    img_trans, bboxes_translated = Resize(700)(img, bboxes)
+for _ in range(1):
+    img_trans, bboxes_translated = Resize(500)(img, bboxes)
     cv2.imshow("ff", img_trans)
     cv2.waitKey(0)
