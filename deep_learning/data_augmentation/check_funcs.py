@@ -483,17 +483,17 @@ class Resize(object):
         del_w = (self.inp_dim - new_w)/2
         add_matrix = np.array([[del_w, del_h, del_w, del_h]]).astype(int)
         #bboxes[:,:4] += add_matrix
-        print(bboxes[:,:4][0])
+        print(bboxes[:,:4])
         bboxes[:,:4] *= (scale)
-        print(bboxes[:,:4][0])
+        print(bboxes[:,:4])
         #x = (self.inp_dim / 8) * scale
         #add_matrix = np.array([[x,x,x,x]]).astype(int)
 
         bboxes = bboxes.astype(int)
-        print(bboxes[:,:4][0])
+        print(bboxes[:,:4])
 
         bboxes = clip_box(bboxes, [0,0,w, h], 0.75)
-        print(bboxes[:,:4][0])
+        print(bboxes[:,:4])
 
         img = img.astype(np.uint8)
         img = draw_rect(img, bboxes)
@@ -603,11 +603,22 @@ class RandomScale(object):
 
         return img, bboxes
 
-
+new_boxes = []
 bboxes = [137,356,151,342,137,219,151,205,183,109,197,95,274,219,288,205,273,417,289,401,91,109,105,95,529,330,545,314,137,109,151,95,530,101,544,87,92,355,104,343,90,476,106,460,45,475,59,461,47,355,59,343,413,355,425,343,412,416,426,402,530,237,544,223,183,356,197,342,320,356,334,342,46,110,60,96,320,415,334,401,530,146,544,132,230,218,242,206,367,355,379,343,530,284,544,270,308,560,318,550,230,355,242,343,275,355,287,343,366,218,378,206,184,218,196,206,530,191,544,177,46,218,58,206,412,218,424,206,321,219,333,207,308,606,318,596,365,415,379,401,93,218,105,206,152,560,162,550,273,497,285,485,153,605,163,595,183,497,195,485]
+for i in range(0, len(bboxes), 4):
+    x1 = bboxes[i]
+    y1 = bboxes[i+1]
+    x2 = bboxes[i+2]
+    y2 = bboxes[i+3]
+    if y1 > y2:
+        y1, y2 = y2, y1
+    new_boxes.append(x1)
+    new_boxes.append(y1)
+    new_boxes.append(x2)
+    new_boxes.append(y2)
 img = cv2.imread("deep_learning/data_augmentation/c22_0.jpg")
 
-for _ in range(1):
-    img_trans, bboxes_translated = Resize(500)(img, bboxes)
+for _ in range(2):
+    img_trans, bboxes_translated = Resize(500)(img, new_boxes)
     cv2.imshow("ff", img_trans)
     cv2.waitKey(0)
