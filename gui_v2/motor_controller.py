@@ -26,9 +26,9 @@ class MotorController(PinsSetup):
         super(self, MotorController).__init__()
         # True - al fin de carrera
         self.motors = {
-            "x" : {"pins": [15, 14], "position": 0},
-            "y" : {"pins": [2, 18], "position": 0},
-            "z" : {"pins": [4, 3], "position": 0},
+            "x" : {"pins": [15, 14], "position": 0, "limit_race": 0},
+            "y" : {"pins": [2, 18], "position": 0, "limit_race": 0},
+            "z" : {"pins": [4, 3], "position": 0, "limit_race": 0},
             "table" : {"pins": [20, 21], "position": 0},
             "pistons" : {"pins": [17, 25], "position": 0},
             "driller": 27
@@ -58,6 +58,10 @@ class MotorController(PinsSetup):
 
         for _ in range(pulses):
 
+            self.motors["x"]["limit_race"] = 0
+            self.motors["y"]["limit_race"] = 0
+            self.motors["z"]["limit_race"] = 0
+
             if direction:
                 self.motors[motor]["position"] += 1
             else:
@@ -69,28 +73,37 @@ class MotorController(PinsSetup):
             if  self.motors["x"]["position"] > 7e3:
                 break
 
-            if GPIO.input(11):
+            while GPIO.input(11):
                 # door
-                break
+                pass
 
-            if GPIO.input(22):
-                self.rebound_limit_switch("x")
-                self.motors["x"]["position"] = 0
-                break
-            if GPIO.input(10):
-                self.rebound_limit_switch("y")
-                self.motors["y"]["position"] = 0
-                break
-            if GPIO.input(9):
-                self.rebound_limit_switch("z")
-                self.motors["z"]["position"] = 0
-                break
+            while GPIO.input(22):
+                self.motors["x"]["limit_race"] += 1
+                if self.motors["x"]["limit_race"] >= 10:
+                    self.rebound_limit_switch("x")
+                    self.motors["x"]["position"] = 0
+                    break
+
+            while GPIO.input(10):
+                self.motors["y"]["limit_race"] += 1
+                if self.motors["y"]["limit_race"] >= 10:
+                    self.rebound_limit_switch("y")
+                    self.motors["y"]["position"] = 0
+                    break
+
+            while GPIO.input(22):
+                self.motors["z"]["limit_race"] += 1
+                if self.motors["z"]["limit_race"] >= 10:
+                    self.rebound_limit_switch("z")
+                    self.motors["z"]["position"] = 0
+                    break
 
             self.send_pulse(self.motors[motor]["pins"][1], motor)
 
     def rebound_limit_switch(self, motor):
         GPIO.output(self.motors[motor]["pins"][0], False)
-        for _ in range(125):
+        pulses = 100 if motor=="z" else 300
+        for _ in range(pulses):
             self.send_pulse(self.motors[motor]["pins"][1], motor)
 
     def go_default_position(self):
@@ -144,7 +157,7 @@ class MotorController(PinsSetup):
 
     def convert_pixels_to_pulses(self, pixels, motor):
         # for x and y motors, 50 pulses = 1mm
-        # for other motors, 100 pulses = 1mm
+        # for pistons is not clear, hardcoded 7 pulses = 1mm per side
         # 5.4 is a hardcoded unit conversor (px/mm), 4.92 should be the real value
 
         # TODO: Implent correctly the pulses for the drilling sequence
