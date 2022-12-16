@@ -59,7 +59,7 @@ class ImagePreprocessing():
         rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
         img_array = cv2.warpAffine(img_array, rot_mat, img_array.shape[1::-1], flags=cv2.INTER_LINEAR)
         img_array = cv2.resize(img_array, (640, 640), interpolation= cv2.INTER_LINEAR)
-        img_array_3D = cv2.merge([np.asarray(self.img_array), np.asarray(self.img_array), np.asarray(self.img_array)])
+        img_array_3D = cv2.merge([np.asarray(img_array), np.asarray(img_array), np.asarray(img_array)])
         return img_array_3D
 
 class CalculateWidth(ttk.Frame):
