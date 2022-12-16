@@ -23,7 +23,7 @@ class PinsSetup():
 
 class MotorController(PinsSetup):
     def __init__(self):
-        super(self, MotorController).__init__()
+        super(MotorController, self).__init__()
         # True - al fin de carrera
         self.motors = {
             "x" : {"pins": [15, 14], "position": 0, "limit_race": 0},
@@ -73,45 +73,49 @@ class MotorController(PinsSetup):
             if  self.motors["x"]["position"] > 7e3:
                 break
 
-            while GPIO.input(11):
+            while not GPIO.input(11):
                 # door
-                pass
+                time.sleep(0.000005)
 
             while GPIO.input(22):
                 self.motors["x"]["limit_race"] += 1
-                if self.motors["x"]["limit_race"] >= 10:
+                if self.motors["x"]["limit_race"] == 10 and GPIO.input(22):
                     self.rebound_limit_switch("x")
                     self.motors["x"]["position"] = 0
-                    break
+                    return
 
             while GPIO.input(10):
                 self.motors["y"]["limit_race"] += 1
-                if self.motors["y"]["limit_race"] >= 10:
+                if self.motors["y"]["limit_race"] == 10 and GPIO.input(10):
                     self.rebound_limit_switch("y")
                     self.motors["y"]["position"] = 0
-                    break
+                    return
 
-            while GPIO.input(22):
+            while GPIO.input(9):
                 self.motors["z"]["limit_race"] += 1
-                if self.motors["z"]["limit_race"] >= 10:
+                if self.motors["z"]["limit_race"] == 10 and GPIO.input(9):
                     self.rebound_limit_switch("z")
                     self.motors["z"]["position"] = 0
-                    break
+                    return
 
             self.send_pulse(self.motors[motor]["pins"][1], motor)
 
     def rebound_limit_switch(self, motor):
+        print("in rebound " + motor)
         GPIO.output(self.motors[motor]["pins"][0], False)
-        pulses = 100 if motor=="z" else 300
-        for _ in range(pulses):
+        if motor == "z":
+            pulses = 100
+        else:
+            pulses = 280
+        for i in range(pulses):
             self.send_pulse(self.motors[motor]["pins"][1], motor)
 
     def go_default_position(self):
-        pulses_z, direction_z = self.get_pulses_and_direction("z", -2000)
+        pulses_z, direction_z = self.get_pulses_and_direction("z", -1100)
         self.move_motor(pulses_z, direction_z, "z")
-        pulses_x, direction_x = self.get_pulses_and_direction("x", -6000)
+        pulses_x, direction_x = self.get_pulses_and_direction("x", -10000)
         self.move_motor(pulses_x, direction_x, "x")
-        pulses_y, direction_y = self.get_pulses_and_direction("y", -10000)
+        pulses_y, direction_y = self.get_pulses_and_direction("y", -11000)
         self.move_motor(pulses_y, direction_y, "y")
 
 
@@ -152,7 +156,8 @@ class MotorController(PinsSetup):
             self.move_motor(width_pulses, True, "pistons")
 
     def move_y_to_user(self):
-        pulses, direction = self.get_pulses_and_direction("y", 10000)
+        # good img at this position
+        pulses, direction = self.get_pulses_and_direction("y", 9300)
         self.move_motor(pulses, direction, "y")
 
     def convert_pixels_to_pulses(self, pixels, motor):
@@ -174,4 +179,3 @@ class MotorController(PinsSetup):
         if pulses < 0:
             direction = True
         return abs(pulses), direction
-
