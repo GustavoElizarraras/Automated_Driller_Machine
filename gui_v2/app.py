@@ -1,4 +1,4 @@
-#from picamera import PiCamera
+from picamera import PiCamera
 from tflite_runtime.interpreter import Interpreter
 import motor_controller as mc
 import tkinter as tk
@@ -42,20 +42,22 @@ class PiCameraPhoto():
         return img_name
 
 class ImagePreprocessing():
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     def __call__(self, img_path, position):
         img_array = cv2.imread(img_path, 0)
-        image_center = tuple(np.array(img_array.shape[1::-1]) / 2)
-        rot_mat = cv2.getRotationMatrix2D(image_center, -3.4, 1.0)
-        img_array = cv2.warpAffine(img_array, rot_mat, img_array.shape[1::-1], flags=cv2.INTER_LINEAR)
-        # TODO: change to the photo position in y_user
         if position == "y_user":
-            img_array = img_array[515:1465, 600:1550]
+            angle = -2
+            img_array = img_array[0:1025, 500:1525]
         elif position == "home":
+            angle = -3.4
             # this one is correct
             img_array = img_array[515:1465, 600:1550]
+        image_center = tuple(np.array(img_array.shape[1::-1]) / 2)
+        # TODO: change to the photo position in y_user
+        rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
+        img_array = cv2.warpAffine(img_array, rot_mat, img_array.shape[1::-1], flags=cv2.INTER_LINEAR)
         img_array = cv2.resize(img_array, (640, 640), interpolation= cv2.INTER_LINEAR)
         img_array_3D = cv2.merge([np.asarray(self.img_array), np.asarray(self.img_array), np.asarray(self.img_array)])
         return img_array_3D
@@ -74,15 +76,16 @@ class CalculateWidth(ttk.Frame):
             7.- Display control frame while going home
         """
         super().__init__(container)
-        self.container = container
         self.img_array = None
+        self.container = container
         self.pi_camera = PiCameraPhoto()
-        self.img_path = self.pi_camera.new_img_path()
+        self.img_path = self.pi_camera.new_img_path
         self.create_widgets()
         motor_controller.go_default_position()
+        time.sleep(1)
         motor_controller.move_y_to_user()
         # table up
-        motor_controller.move_motor(300, False, "table")
+        motor_controller.move_motor(275, False, "table")
 
     def create_widgets(self):
         # release or grab harder methods
@@ -142,7 +145,7 @@ class CalculateWidth(ttk.Frame):
         pulses = mc.convert_pixels_to_pulses(width_px, "pistons")
         motor_controller.set_grabber(pulses, grab=True)
         # table down
-        motor_controller.move_motor(300, True, "table")
+        motor_controller.move_motor(275, True, "table")
 
     def adjust_grab(self, grab):
         if grab == "release":
@@ -170,7 +173,7 @@ class ImageInitializer(ttk.Frame):
         self.img_path = self.picamera.new_img_path()
         # PCB Image
         # gray image of the pcb that takes the camera
-        self.img_array = ImagePreprocessing()(self.img_path, "y_user")
+        self.img_array = ImagePreprocessing()(self.img_path, "home")
         self.pin_holes = ProcessPinHolesCenters(self.img_array)
         self.coords = self.pin_holes.coords_processed
 
