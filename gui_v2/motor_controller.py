@@ -63,14 +63,14 @@ class MotorController(PinsSetup):
             self.motors["z"]["limit_race"] = 0
 
             if direction:
-                self.motors[motor]["position"] += 1
-            else:
                 self.motors[motor]["position"] -= 1
+            else:
+                self.motors[motor]["position"] += 1
 
-            if  self.motors["y"]["position"] > 1e4:
+            if  self.motors["y"]["position"] > 11.5e4:
                 break
 
-            if  self.motors["x"]["position"] > 7e3:
+            if  self.motors["x"]["position"] > 8.5e3:
                 break
 
             while not GPIO.input(11):
@@ -115,17 +115,17 @@ class MotorController(PinsSetup):
         self.move_motor(pulses_z, direction_z, "z")
         pulses_x, direction_x = self.get_pulses_and_direction("x", -10000)
         self.move_motor(pulses_x, direction_x, "x")
-        pulses_y, direction_y = self.get_pulses_and_direction("y", -11000)
+        pulses_y, direction_y = self.get_pulses_and_direction("y", -12000)
         self.move_motor(pulses_y, direction_y, "y")
-
 
     def go_home(self):
         # position for taking the photo
+        # TODO: check manually the pulses to get the positions for drilling
         pulses_z, direction_z = self.get_pulses_and_direction("z", 0)
         self.move_motor(pulses_z, direction_z, "z")
-        pulses_x, direction_x = self.get_pulses_and_direction("x", 0)
+        pulses_x, direction_x = self.get_pulses_and_direction("x", 1000)
         self.move_motor(pulses_x, direction_x, "x")
-        pulses_y, direction_y = self.get_pulses_and_direction("y", 0)
+        pulses_y, direction_y = self.get_pulses_and_direction("y", 5000)
         self.move_motor(pulses_y, direction_y, "y")
 
     def set_table_height(self, direction):
@@ -150,7 +150,6 @@ class MotorController(PinsSetup):
 
     def set_grabber(self, width_pulses, grab=True):
         if grab:
-            # TODO: convert width to pulses (?) try out if it works
             self.move_motor(width_pulses, False, "pistons")
         if not grab:
             self.move_motor(width_pulses, True, "pistons")
@@ -169,7 +168,7 @@ class MotorController(PinsSetup):
         if motor == "y" or motor == "x":
             pulses = int((pixels / 5.4 ) * 50)
         elif motor == "pistons":
-            pulses = int(130 - (pixels / 5.4 ) * 7)
+            pulses = int((130 - (pixels / 5.4 )) * 5.25)
         return pulses
 
     def get_pulses_and_direction(self, motor, destination):
