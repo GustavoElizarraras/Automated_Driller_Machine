@@ -55,7 +55,6 @@ class ImagePreprocessing():
             # this one is correct
             img_array = img_array[515:1465, 600:1550]
         image_center = tuple(np.array(img_array.shape[1::-1]) / 2)
-        # TODO: change to the photo position in y_user
         rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
         img_array = cv2.warpAffine(img_array, rot_mat, img_array.shape[1::-1], flags=cv2.INTER_LINEAR)
         img_array = cv2.resize(img_array, (640, 640), interpolation= cv2.INTER_LINEAR)
@@ -114,15 +113,15 @@ class CalculateWidth(ttk.Frame):
         self.start_button.configure(command=self.display_control_panel_panel)
 
     def get_pcb_width(self):
-        _, self.img_array = cv2.threshold(self.img_array, 152 , 255, cv2.THRESH_BINARY)
+        _, self.img_array = cv2.threshold(self.img_array, 110 , 255, cv2.THRESH_BINARY)
         self.img_array = cv2.erode(self.img_array, (41,41), iterations = 1)
-        canny = cv2.Canny(self.img_array, 160, 255, 1)
+        canny = cv2.Canny(self.img_array, 110, 255, 1)
         lines = cv2.HoughLinesP(
                     canny, # Input edge image
                     2, # Distance resolution in pixels
                     np.pi/180, # Angle resolution in radians
-                    threshold=75, # Min number of votes for valid line
-                    minLineLength=5, # Min allowed length of line
+                    threshold=200, # Min number of votes for valid line
+                    minLineLength=50, # Min allowed length of line
                     maxLineGap=100 # Max allowed gap between line for joining them
                     )
         xmax = 0
@@ -141,20 +140,20 @@ class CalculateWidth(ttk.Frame):
         # TODO: finish sequence with pulses
         self.pi_camera.take_photo()
         self.img_array = ImagePreprocessing()(self.img_path, "y_user")
-        width_px = self.get_pcb_width()
-        pulses = mc.convert_pixels_to_pulses(width_px, "pistons")
+        width_px = motor_controller.get_pcb_width()
+        pulses = motor_controller.convert_pixels_to_pulses(width_px, "pistons")
         motor_controller.set_grabber(pulses, grab=True)
-        # table down
-        motor_controller.move_motor(275, True, "table")
 
     def adjust_grab(self, grab):
         if grab == "release":
             # 0.5 mm
-            motor_controller.move_motor(50, True, "pistons")
+            motor_controller.move_motor(25, True, "pistons")
         else:
-            motor_controller.move_motor(50, False, "pistons")
+            motor_controller.move_motor(25, False, "pistons")
 
     def display_control_panel_panel(self):
+        # table down
+        motor_controller.move_motor(275, True, "table")
         motor_controller.go_home()
         for widget in self.container.winfo_children():
             widget.destroy()
