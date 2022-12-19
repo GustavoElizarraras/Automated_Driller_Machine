@@ -101,7 +101,6 @@ class MotorController(PinsSetup):
             self.send_pulse(self.motors[motor]["pins"][1], motor)
 
     def rebound_limit_switch(self, motor):
-        print("in rebound " + motor)
         GPIO.output(self.motors[motor]["pins"][0], False)
         if motor == "z":
             pulses = 100
@@ -119,13 +118,11 @@ class MotorController(PinsSetup):
         self.move_motor(pulses_y, direction_y, "y")
 
     def go_home(self):
-        # position for taking the photo
-        # TODO: check manually the pulses to get the positions for drilling
         pulses_z, direction_z = self.get_pulses_and_direction("z", 0)
         self.move_motor(pulses_z, direction_z, "z")
-        pulses_x, direction_x = self.get_pulses_and_direction("x", 1000)
+        pulses_x, direction_x = self.get_pulses_and_direction("x", 0)
         self.move_motor(pulses_x, direction_x, "x")
-        pulses_y, direction_y = self.get_pulses_and_direction("y", 5000)
+        pulses_y, direction_y = self.get_pulses_and_direction("y", 6300)
         self.move_motor(pulses_y, direction_y, "y")
 
     def set_table_height(self, direction):
