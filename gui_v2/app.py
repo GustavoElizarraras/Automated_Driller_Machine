@@ -113,9 +113,9 @@ class CalculateWidth(ttk.Frame):
         self.start_button.configure(command=self.display_control_panel_panel)
 
     def get_pcb_width(self):
-        _, self.img_array = cv2.threshold(self.img_array, 110 , 255, cv2.THRESH_BINARY)
+        _, self.img_array = cv2.threshold(self.img_array, 210 , 255, cv2.THRESH_BINARY)
         self.img_array = cv2.erode(self.img_array, (41,41), iterations = 1)
-        canny = cv2.Canny(self.img_array, 110, 255, 1)
+        canny = cv2.Canny(self.img_array, 100, 255, 1)
         lines = cv2.HoughLinesP(
                     canny, # Input edge image
                     2, # Distance resolution in pixels
@@ -155,18 +155,16 @@ class CalculateWidth(ttk.Frame):
         # table down
         motor_controller.move_motor(275, True, "table")
         motor_controller.go_home()
+        image_home = ImageInitializer()
         for widget in self.container.winfo_children():
             widget.destroy()
-        frame = ControlFrame(self.container, self.img_name)
+        time.sleep(0.25)
+        frame = ControlFrame(self.container, image_home.img_array, image_home.coords)
+        time.sleep(0.25)
         frame.tkraise()
 
-class ImageInitializer(ttk.Frame):
-    def __init__(self, container):
-        super().__init__(container)
-        self.container = container
-
-        # Hardcoded path, to remove later
-        self.img_path = "gui_v2/good_img.jpg"
+class ImageInitializer():
+    def __init__(self):
 
         self.pi_camera = PiCameraPhoto()
         self.img_path = self.picamera.new_img_path()
@@ -176,6 +174,17 @@ class ImageInitializer(ttk.Frame):
         self.pin_holes = ProcessPinHolesCenters(self.img_array)
         self.coords = self.pin_holes.coords_processed
 
+class ImageUtilsFrame(ttk.Frame):
+    def __init__(self, container, img_array, coords):
+        super().__init__(container)
+        self.container = container
+
+        self.pi_camera = PiCameraPhoto()
+        self.img_path = self.picamera.new_img_path()
+        # PCB Image
+        # gray image of the pcb that takes the camera
+        self.img_array = img_array
+        self.coords = coords
         # pin-holes identifiers
         self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
         self.show_green_holes()
@@ -208,9 +217,9 @@ class ImageInitializer(ttk.Frame):
             cv2.putText(self.img_array, f"B{num[0]}", (coord[0]-10, coord[1]-11), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,135,160), 2)
 
 
-class ControlFrame(ImageInitializer):
-    def __init__(self, container, coords=None):
-        super().__init__(container, coords=None)
+class ControlFrame(ImageUtilsFrame):
+    def __init__(self, container, img_array, coords):
+        super().__init__(container, img_array, coords)
         self.create_widgets()
 
     def create_widgets(self):
@@ -244,9 +253,9 @@ class ControlFrame(ImageInitializer):
         frame = DeletePCBHole(self.container, self.coords)
         frame.tkraise()
 
-class AddMovePCBHole(ImageInitializer):
-    def __init__(self, container, coords):
-        super().__init__(container, coords)
+class AddMovePCBHole(ImageUtilsFrame):
+    def __init__(self, container, img_array, coords):
+        super().__init__(container, img_array, coords)
         self.posx, self.posy = None, None
         self.selected_hole_name = None
         self.dummy_img = self.img_array
@@ -334,12 +343,12 @@ class AddMovePCBHole(ImageInitializer):
     def return_main(self):
         for widget in self.container.winfo_children():
             widget.destroy()
-        frame = ControlFrame(self.container, self.coords)
+        frame = ControlFrame(self.container, self.img_array, self.coords)
         frame.tkraise()
 
-class DeletePCBHole(ImageInitializer):
-    def __init__(self, container, coords):
-        super().__init__(container, coords)
+class DeletePCBHole(ImageUtilsFrame):
+    def __init__(self, container, img_array, coords):
+        super().__init__(container, img_array, coords)
         self.selected_hole_name = None
         self.create_listbox()
 
@@ -386,7 +395,7 @@ class DeletePCBHole(ImageInitializer):
     def return_main(self):
         for widget in self.container.winfo_children():
             widget.destroy()
-        frame = ControlFrame(self.container, self.coords)
+        frame = ControlFrame(self.container, self.img_array, self.coords)
         frame.tkraise()
 
 class ProcessPinHolesCenters():
