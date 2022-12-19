@@ -48,12 +48,12 @@ class ImagePreprocessing():
     def __call__(self, img_path, position):
         img_array = cv2.imread(img_path, 0)
         if position == "y_user":
-            angle = -2
+            angle = -2.75
             img_array = img_array[0:1025, 500:1525]
         elif position == "home":
-            angle = -3.4
+            angle = -2.25
             # this one is correct
-            img_array = img_array[515:1465, 600:1550]
+            img_array = img_array[510:1460, 505:1555]
         image_center = tuple(np.array(img_array.shape[1::-1]) / 2)
         rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
         img_array = cv2.warpAffine(img_array, rot_mat, img_array.shape[1::-1], flags=cv2.INTER_LINEAR)
