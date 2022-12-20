@@ -25,8 +25,7 @@ class PiCameraPhoto():
         time.sleep(2)
         self.camera.capture(new_img_path)
         self.camera.stop_preview()
-        time.sleep(1)
-        self.camera.close()
+        time.sleep(0.5)
 
     def get_last_img_dir(self):
         list_of_files = glob.glob(self.dir + "*.jpg")
@@ -81,7 +80,7 @@ class CalculateWidth(ttk.Frame):
         super().__init__(container)
         self.img_array = None
         self.container = container
-        self.img_path = pi_camera.get_new_path()
+        self.img_path = pi_camera.get_last_img_dir()
         self.create_widgets()
         motor_controller.go_default_position()
         time.sleep(1)
@@ -159,19 +158,20 @@ class CalculateWidth(ttk.Frame):
     def display_control_panel_panel(self):
         # table down
         motor_controller.move_motor(300, True, "table")
+        time.sleep(0.5)
         motor_controller.go_home()
-        image_home = ImageInitializer()
+        pi_camera.take_photo()
+        img_home_path = pi_camera.get_last_img_dir()
+        image_home = ImageInitializer(img_home_path)
         for widget in self.container.winfo_children():
             widget.destroy()
-        time.sleep(0.25)
         frame = ControlFrame(self.container, image_home.img_array, image_home.coords)
-        time.sleep(0.25)
         frame.tkraise()
 
 class ImageInitializer():
-    def __init__(self):
+    def __init__(self, img_path):
 
-        self.img_path = pi_camera.get_new_path()
+        self.img_path = img_path
         # PCB Image
         # gray image of the pcb that takes the camera
         self.img_array = ImagePreprocessing()(self.img_path, "home")
@@ -183,7 +183,7 @@ class ImageUtilsFrame(ttk.Frame):
         super().__init__(container)
         self.container = container
 
-        self.img_path = pi_camera.get_new_path()
+        self.img_path = pi_camera.get_last_img_dir()
         # PCB Image
         # gray image of the pcb that takes the camera
         self.img_array = img_array
