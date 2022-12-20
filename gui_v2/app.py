@@ -8,7 +8,6 @@ from PIL import Image, ImageTk
 import numpy as np
 import cv2
 import os
-import csv
 import glob
 import time
 import re
@@ -18,15 +17,13 @@ class PiCameraPhoto():
         self.camera = PiCamera()
         self.camera.resolution = (2592, 1944)
         self.dir = "/home/pi/Documents/pcb_images/"
-        self.last_img_path = self.get_last_img_dir()
-        self.img_name = self.get_img_name(self.last_img_path)
-        self.new_img_path = self.dir + self.img_name
 
     def take_photo(self):
+        new_img_path = self.get_new_path()
         self.camera.start_preview()
         # Camera warm-up time
         time.sleep(2)
-        self.camera.capture(self.new_img_path)
+        self.camera.capture(new_img_path)
         self.camera.stop_preview()
         time.sleep(1)
         self.camera.close()
@@ -41,6 +38,12 @@ class PiCameraPhoto():
         last_img_num = re.findall(r'\d+', last_img)
         img_name = "img_" + str(int(last_img_num[-1]) + 1) + ".jpg"
         return img_name
+
+    def get_new_path(self):
+        last_img_path = self.get_last_img_dir()
+        img_name = self.get_img_name(last_img_path)
+        new_img_path = self.dir + img_name
+        return new_img_path
 
 class ImagePreprocessing():
     def __init__(self) -> None:
@@ -78,7 +81,7 @@ class CalculateWidth(ttk.Frame):
         super().__init__(container)
         self.img_array = None
         self.container = container
-        self.img_path = pi_camera.new_img_path
+        self.img_path = pi_camera.get_new_path()
         self.create_widgets()
         motor_controller.go_default_position()
         time.sleep(1)
@@ -168,7 +171,7 @@ class CalculateWidth(ttk.Frame):
 class ImageInitializer():
     def __init__(self):
 
-        self.img_path = pi_camera.new_img_path()
+        self.img_path = pi_camera.get_new_path()
         # PCB Image
         # gray image of the pcb that takes the camera
         self.img_array = ImagePreprocessing()(self.img_path, "home")
@@ -180,7 +183,7 @@ class ImageUtilsFrame(ttk.Frame):
         super().__init__(container)
         self.container = container
 
-        self.img_path = pi_camera.new_img_path()
+        self.img_path = pi_camera.get_new_path()
         # PCB Image
         # gray image of the pcb that takes the camera
         self.img_array = img_array
@@ -188,7 +191,6 @@ class ImageUtilsFrame(ttk.Frame):
         # pin-holes identifiers
         self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
         self.show_green_holes()
-
 
     def render_img(self, img_array, binding=None):
         self.render = ImageTk.PhotoImage(Image.fromarray(img_array))
