@@ -53,7 +53,7 @@ class ImagePreprocessing():
         elif position == "home":
             angle = -2.25
             # this one is correct
-            img_array = img_array[510:1460, 505:1555]
+            img_array = img_array[710:1660, 550:1540]
         image_center = tuple(np.array(img_array.shape[1::-1]) / 2)
         rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
         img_array = cv2.warpAffine(img_array, rot_mat, img_array.shape[1::-1], flags=cv2.INTER_LINEAR)
@@ -140,8 +140,10 @@ class CalculateWidth(ttk.Frame):
         # TODO: finish sequence with pulses
         self.pi_camera.take_photo()
         self.img_array = ImagePreprocessing()(self.img_path, "y_user")
-        width_px = motor_controller.get_pcb_width()
+        width_px = self.get_pcb_width()
         pulses = motor_controller.convert_pixels_to_pulses(width_px, "pistons")
+        if pulses > 700:
+            pulses = 700
         motor_controller.set_grabber(pulses, grab=True)
 
     def adjust_grab(self, grab):
