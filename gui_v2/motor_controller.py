@@ -122,7 +122,7 @@ class MotorController(PinsSetup):
         self.move_motor(pulses_z, direction_z, "z")
         pulses_x, direction_x = self.get_pulses_and_direction("x", 0)
         self.move_motor(pulses_x, direction_x, "x")
-        pulses_y, direction_y = self.get_pulses_and_direction("y", 6300)
+        pulses_y, direction_y = self.get_pulses_and_direction("y", 5000)
         self.move_motor(pulses_y, direction_y, "y")
 
     def set_table_height(self, direction):
