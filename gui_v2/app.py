@@ -45,24 +45,32 @@ class PiCameraPhoto():
         return new_img_path
 
 class ImagePreprocessing():
-    def __init__(self) -> None:
-        pass
+    def __init__(self, img_path):
+        self.img_path = img_path
+        self.img_array = cv2.imread(img_path, 0)
 
-    def __call__(self, img_path, position):
-        img_array = cv2.imread(img_path, 0)
-        if position == "y_user":
-            angle = -2.75
-            img_array = img_array[0:1025, 500:1525]
-        elif position == "home":
-            angle = -2.25
-            # this one is correct
-            img_array = img_array[710:1660, 550:1540]
-        image_center = tuple(np.array(img_array.shape[1::-1]) / 2)
+    def crop_rotate(self, crops_coords, angle):
+        y1, y2, x1, x2 = crops_coords
+        self.img_array = self.img_array[y1: y2, x1: x2]
+        image_center = tuple(np.array(self.img_array.shape[1::-1]) / 2)
         rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
-        img_array = cv2.warpAffine(img_array, rot_mat, img_array.shape[1::-1], flags=cv2.INTER_LINEAR)
-        img_array = cv2.resize(img_array, (640, 640), interpolation= cv2.INTER_LINEAR)
-        img_array_3D = cv2.merge([np.asarray(img_array), np.asarray(img_array), np.asarray(img_array)])
-        return img_array_3D
+        self.img_array = cv2.warpAffine(self.img_array, rot_mat, self.img_array.shape[1::-1], flags=cv2.INTER_LINEAR)
+        return self.img_array
+
+    def do_multiple_images(self):
+        img_array = self.crop_rotate((700,1660,550,1540), -2.75)
+        ym = img_array.shape[0] // 3
+        xm = img_array.shape[1] // 3
+        imgs = []
+        for j in range(1,4):
+            for i in range(1,4):
+                sub_img = img_array[(j-1)*ym: (j*ym), (i-1)*xm: i*xm]
+                sub_img = cv2.resize(sub_img, (640, 640), interpolation= cv2.INTER_LINEAR)
+                _, sub_img = cv2.threshold(sub_img, 215, 255, cv2.THRESH_BINARY)
+                sub_img = cv2.bitwise_not(sub_img)
+                sub_img = sub_img.astype(np.uint8)
+                imgs.append(sub_img)
+        return np.stack(imgs, axis=0)
 
 class CalculateWidth(ttk.Frame):
     def __init__(self, container):
@@ -80,7 +88,6 @@ class CalculateWidth(ttk.Frame):
         super().__init__(container)
         self.img_array = None
         self.container = container
-        self.img_path = pi_camera.get_last_img_dir()
         self.create_widgets()
         motor_controller.go_default_position()
         time.sleep(1)
@@ -141,7 +148,9 @@ class CalculateWidth(ttk.Frame):
     def do_sequence(self):
         # TODO: finish sequence with pulses
         pi_camera.take_photo()
-        self.img_array = ImagePreprocessing()(self.img_path, "y_user")
+        img_path = pi_camera.get_last_img_dir()
+        self.img_array = ImagePreprocessing(img_path).crop_rotate((0,1025,500,1525), -2.75)
+        self.img_array = cv2.resize(self.img_array, (640, 640), interpolation= cv2.INTER_LINEAR)
         width_px = self.get_pcb_width()
         pulses = motor_controller.convert_pixels_to_pulses(width_px, "pistons")
         if pulses > 700:
@@ -174,9 +183,17 @@ class ImageInitializer():
         self.img_path = img_path
         # PCB Image
         # gray image of the pcb that takes the camera
-        self.img_array = ImagePreprocessing()(self.img_path, "home")
-        self.pin_holes = ProcessPinHolesCenters(self.img_array)
+        self.imgs_array = ImagePreprocessing(self.img_path).do_multiple_images()
+        self.pin_holes = ProcessPinHolesCenters(self.imgs_array)
         self.coords = self.pin_holes.coords_processed
+        img_bin_path = pi_camera.get_new_path()
+        img_bin = ImagePreprocessing(self.img_path).crop_rotate((700,1660,550,1540), -2.75)
+        img_bin = cv2.resize(img_bin, (640, 640), interpolation= cv2.INTER_LINEAR)
+        _, img_bin = cv2.threshold(img_bin, 215, 255, cv2.THRESH_BINARY)
+        img_bin = cv2.bitwise_not(img_bin)
+        img_bin = img_bin.astype(np.uint8)
+        cv2.imwrite(img_bin_path, img_bin)
+
 
 class ImageUtilsFrame(ttk.Frame):
     def __init__(self, container, img_array, coords):
@@ -187,6 +204,7 @@ class ImageUtilsFrame(ttk.Frame):
         # PCB Image
         # gray image of the pcb that takes the camera
         self.img_array = img_array
+        self.img_array_original = img_array.copy()
         self.coords = coords
         # pin-holes identifiers
         self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
@@ -401,10 +419,8 @@ class DeletePCBHole(ImageUtilsFrame):
         frame.tkraise()
 
 class ProcessPinHolesCenters():
-    def __init__(self, img):
-        self.img = img
-        self.one_channel, _, _ = cv2.split(self.img)
-        self.image_bin_not = cv2.bitwise_not(self.one_channel)
+    def __init__(self, imgs_array):
+        self.imgs_array = imgs_array
         self.predictions = None
         self.raw_coords = []
         self.coords_processed = []
@@ -420,20 +436,46 @@ class ProcessPinHolesCenters():
         input_details = self.interpreter.get_input_details()
         output_details = self.interpreter.get_output_details()
 
-        self.interpreter.set_tensor(input_details[0]['index'], self.one_channel)
+        self.interpreter.set_tensor(input_details[0]['index'], self.imgs_array)
         self.interpreter.invoke()
         self.predictions = self.interpreter.get_tensor(output_details[0]['index'])
 
     def transform_predictions_to_coords(self):
         threshold = 0.5
         GRID_SIZE = 8
-        for mx in range(80):
-            for my in range(80):
-                channels = self.predictions[my][mx]
-                prob, x1, y1, x2, y2 = channels
-                if prob >= threshold:
-                    px1, py1 = (mx * GRID_SIZE) + x1, (my * GRID_SIZE) + y1
-                    px2, py2 = (mx * GRID_SIZE) + x2, (my * GRID_SIZE) + y2
+        for i in range(1,10):
+            for mx in range(80):
+                for my in range(80):
+                    channels = self.predictions[i-1][my][mx]
+                    prob, x1, y1, x2, y2 = channels
+
+                    if prob < threshold:
+                        continue
+
+                    px1, py1 = ((mx * GRID_SIZE) + x1) // 3, ((my * GRID_SIZE) + y1) // 3
+                    px2, py2 = ((mx * GRID_SIZE) + x2) // 3, ((my * GRID_SIZE) + y2) // 3
+
+                    if i == 2:
+                        px1, px2 = px1 + 213, px2 + 213
+                    if i == 3:
+                        px1, px2 = px1 + 426, px2 + 426
+                    if i == 4:
+                        py1, py2 = py1 + 213, py2 + 213
+                    if i == 5:
+                        px1, px2 = px1 + 213, px2 + 213
+                        py1, py2 = py1 + 213, py2 + 213
+                    if i == 6:
+                        px1, px2 = px1 + 426, px2 + 426
+                        py1, py2 = py1 + 213, py2 + 426
+                    if i == 7:
+                        py1, py2 = py1 + 426, py2 + 426
+                    if i == 8:
+                        px1, px2 = px1 + 213, px2 + 213
+                        py1, py2 = py1 + 426, py2 + 426
+                    if i == 9:
+                        px1, px2 = px1 + 426, px2 + 426
+                        py1, py2 = py1 + 426, py2 + 426
+
                     self.raw_coords.append(px1)
                     self.raw_coords.append(py1)
                     self.raw_coords.append(px2)
@@ -486,5 +528,4 @@ if __name__ == "__main__":
     pi_camera = PiCameraPhoto()
     app = App()
     CalculateWidth(app)
-    # BinarizingFrame(app, "/home/pi/Documents/pcb_images/")
     app.mainloop()
