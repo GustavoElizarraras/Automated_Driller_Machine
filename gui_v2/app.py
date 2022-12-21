@@ -68,9 +68,9 @@ class ImagePreprocessing():
                 sub_img = cv2.resize(sub_img, (640, 640), interpolation= cv2.INTER_LINEAR)
                 _, sub_img = cv2.threshold(sub_img, 215, 255, cv2.THRESH_BINARY)
                 sub_img = cv2.bitwise_not(sub_img)
-                sub_img = sub_img.astype(np.uint8)
-                imgs.append(sub_img)
-        return np.stack(imgs, axis=0)
+                sub_img = sub_img.astype(np.float32)
+                imgs.append(np.expand_dims(sub_img, axis=0))
+        return imgs
 
 class CalculateWidth(ttk.Frame):
     def __init__(self, container):
@@ -428,9 +428,9 @@ class DeletePCBHole(ImageUtilsFrame):
         frame.tkraise()
 
 class ProcessPinHolesCenters():
-    def __init__(self, imgs_array):
-        self.imgs_array = imgs_array
-        self.predictions = None
+    def __init__(self, imgs):
+        self.imgs = imgs
+        self.predictions = []
         self.raw_coords = []
         self.coords_processed = []
         self.predict_cnn()
@@ -445,9 +445,10 @@ class ProcessPinHolesCenters():
         input_details = self.interpreter.get_input_details()
         output_details = self.interpreter.get_output_details()
 
-        self.interpreter.set_tensor(input_details[0]['index'], self.imgs_array)
-        self.interpreter.invoke()
-        self.predictions = self.interpreter.get_tensor(output_details[0]['index'])
+        for sub_img in self.imgs:
+            self.interpreter.set_tensor(input_details[0]['index'], sub_img)
+            self.interpreter.invoke()
+            self.predictions.append(self.interpreter.get_tensor(output_details[0]['index']))
 
     def transform_predictions_to_coords(self):
         threshold = 0.5
