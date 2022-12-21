@@ -257,7 +257,7 @@ class ControlFrame(ImageUtilsFrame):
         # button
         self.del_button = ttk.Button(self.container, text='Iniciar barrenado')
         self.del_button.place(x = 700, y = 90)
-        self.del_button.configure(command=self.press_delete)
+        self.del_button.configure(command=self.start_drilling)
 
     def clear_frame(self):
         for widget in self.container.winfo_children():
@@ -272,6 +272,15 @@ class ControlFrame(ImageUtilsFrame):
         self.clear_frame()
         frame = DeletePCBHole(self.container, self.coords)
         frame.tkraise()
+
+    def start_drilling(self):
+        for coord in self.coords:
+            x, y = coord
+            x_pos = motor_controller.convert_pixels_to_pulses(x, "x")
+            y_pos = motor_controller.convert_pixels_to_pulses(y, "y")
+            motor_controller.move_x_y(x_pos, y_pos)
+            motor_controller.drill()
+            time.sleep(0.05)
 
 class AddMovePCBHole(ImageUtilsFrame):
     def __init__(self, container, coords):
@@ -511,7 +520,7 @@ class ProcessPinHolesCenters():
                 a, b, r = int(pt[0]), int(pt[1]), int(pt[2])
                 new_x1 = x1 + a
                 new_y1 = y1 + b
-                self.coords_processed.append((new_x1, new_y1, r))
+                self.coords_processed.append((new_x1, new_y1))
         except:
             pass
 
