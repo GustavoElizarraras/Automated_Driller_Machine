@@ -174,7 +174,7 @@ class CalculateWidth(ttk.Frame):
         image_home = ImageInitializer(img_home_path)
         for widget in self.container.winfo_children():
             widget.destroy()
-        frame = ControlFrame(self.container, image_home.img_array, image_home.coords)
+        frame = ControlFrame(self.container, image_home.coords)
         frame.tkraise()
 
 class ImageInitializer():
@@ -186,6 +186,7 @@ class ImageInitializer():
         self.imgs_array = ImagePreprocessing(self.img_path).do_multiple_images()
         self.pin_holes = ProcessPinHolesCenters(self.imgs_array)
         self.coords = self.pin_holes.coords_processed
+
         img_bin_path = pi_camera.get_new_path()
         img_bin = ImagePreprocessing(self.img_path).crop_rotate((700,1660,550,1540), -2.75)
         img_bin = cv2.resize(img_bin, (640, 640), interpolation= cv2.INTER_LINEAR)
@@ -194,17 +195,16 @@ class ImageInitializer():
         img_bin = img_bin.astype(np.uint8)
         cv2.imwrite(img_bin_path, img_bin)
 
-
 class ImageUtilsFrame(ttk.Frame):
-    def __init__(self, container, img_array, coords):
+    def __init__(self, container, coords):
         super().__init__(container)
         self.container = container
 
         self.img_path = pi_camera.get_last_img_dir()
         # PCB Image
-        # gray image of the pcb that takes the camera
-        self.img_array = img_array
-        self.img_array_original = img_array.copy()
+        # binarized image of the pcb that takes the camera
+        self.img_array = cv2.imread(self.img_path, 0)
+        self.img_array = cv2.merge([self.img_array, self.img_array, self.img_array])
         self.coords = coords
         # pin-holes identifiers
         self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
@@ -238,8 +238,8 @@ class ImageUtilsFrame(ttk.Frame):
 
 
 class ControlFrame(ImageUtilsFrame):
-    def __init__(self, container, img_array, coords):
-        super().__init__(container, img_array, coords)
+    def __init__(self, container, coords):
+        super().__init__(container, coords)
         self.create_widgets()
 
     def create_widgets(self):
@@ -274,8 +274,8 @@ class ControlFrame(ImageUtilsFrame):
         frame.tkraise()
 
 class AddMovePCBHole(ImageUtilsFrame):
-    def __init__(self, container, img_array, coords):
-        super().__init__(container, img_array, coords)
+    def __init__(self, container, coords):
+        super().__init__(container, coords)
         self.posx, self.posy = None, None
         self.selected_hole_name = None
         self.dummy_img = self.img_array
@@ -367,8 +367,8 @@ class AddMovePCBHole(ImageUtilsFrame):
         frame.tkraise()
 
 class DeletePCBHole(ImageUtilsFrame):
-    def __init__(self, container, img_array, coords):
-        super().__init__(container, img_array, coords)
+    def __init__(self, container, coords):
+        super().__init__(container, coords)
         self.selected_hole_name = None
         self.create_listbox()
 
