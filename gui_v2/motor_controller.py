@@ -35,7 +35,7 @@ class MotorController(PinsSetup):
         }
 
     def send_pulse(self, pwm_pin, motor):
-        if motor == "pistons":
+        if motor == "pistons" or motor == "z":
             # 500
             GPIO.output(pwm_pin, False)
             time.sleep(0.005)
@@ -118,7 +118,7 @@ class MotorController(PinsSetup):
         self.move_motor(pulses_y, direction_y, "y")
 
     def go_home(self):
-        pulses_z, direction_z = self.get_pulses_and_direction("z", 0)
+        pulses_z, direction_z = self.get_pulses_and_direction("z", 500)
         self.move_motor(pulses_z, direction_z, "z")
         pulses_x, direction_x = self.get_pulses_and_direction("x", 0)
         self.move_motor(pulses_x, direction_x, "x")
@@ -137,13 +137,15 @@ class MotorController(PinsSetup):
         elif direction == "down":
             self.move_motor(5000, False, "z")
 
-    def move_x_y(self, pulses_x, direction_x, pulses_y, direction_y):
+    def move_x_y(self, pos_x, pos_y):
+        pulses_x, direction_x = self.get_pulses_and_direction("x", pos_x)
         self.move_motor(pulses_x, direction_x, "x")
+        pulses_y, direction_y = self.get_pulses_and_direction("y", pos_y)
         self.move_motor(pulses_y, direction_y, "y")
 
     def drill(self):
-        self.move_motor(1500, True, "z")
-        self.move_motor(1500, False, "z")
+        self.move_motor(500, False, "z")
+        self.move_motor(500, True, "z")
 
     def set_grabber(self, width_pulses, grab=True):
         if grab:
@@ -162,8 +164,10 @@ class MotorController(PinsSetup):
         # 5.4 is a hardcoded unit conversor (px/mm), 4.92 should be the real value
 
         # TODO: Implent correctly the pulses for the drilling sequence
-        if motor == "y" or motor == "x":
-            pulses = int((pixels / 5.4 ) * 50)
+        if motor == "x":
+            pulses = int(1611.590361 + (6292.048193*pixels // 640))
+        elif motor == "y":
+            pulses = int(8219.387309 - (5825.820569*pixels // 640))
         elif motor == "pistons":
             pulses = int((130 - (pixels / 5.4 )) * 5.25)
         return pulses
