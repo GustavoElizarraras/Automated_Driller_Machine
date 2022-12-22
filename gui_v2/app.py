@@ -69,7 +69,7 @@ class ImagePreprocessing():
                 _, sub_img = cv2.threshold(sub_img, 215, 255, cv2.THRESH_BINARY)
                 sub_img = cv2.bitwise_not(sub_img)
                 sub_img = sub_img.astype(np.float32)
-                imgs.append(np.expand_dims(sub_img, axis=0))
+                imgs.append(np.expand_dims(sub_img, axis=-1))
         return imgs
 
 class CalculateWidth(ttk.Frame):
@@ -187,11 +187,13 @@ class ImageInitializer():
         self.pin_holes = ProcessPinHolesCenters(self.imgs_array)
         self.coords = self.pin_holes.coords_processed
 
+
         img_bin_path = pi_camera.get_new_path()
         img_bin = ImagePreprocessing(self.img_path).crop_rotate((700,1660,550,1540), -2.75)
         img_bin = cv2.resize(img_bin, (640, 640), interpolation= cv2.INTER_LINEAR)
-        _, img_bin = cv2.threshold(img_bin, 215, 255, cv2.THRESH_BINARY)
-        img_bin = cv2.bitwise_not(img_bin)
+        # _, img_bin = cv2.threshold(img_bin, 215, 255, cv2.THRESH_BINARY)
+        _, img_bin = cv2.threshold(img_bin, 200, 255, cv2.THRESH_BINARY)
+        # img_bin = cv2.bitwise_not(img_bin)
         img_bin = img_bin.astype(np.uint8)
         cv2.imwrite(img_bin_path, img_bin)
 
@@ -372,7 +374,7 @@ class AddMovePCBHole(ImageUtilsFrame):
     def return_main(self):
         for widget in self.container.winfo_children():
             widget.destroy()
-        frame = ControlFrame(self.container, self.img_array, self.coords)
+        frame = ControlFrame(self.container, self.coords)
         frame.tkraise()
 
 class DeletePCBHole(ImageUtilsFrame):
@@ -424,21 +426,19 @@ class DeletePCBHole(ImageUtilsFrame):
     def return_main(self):
         for widget in self.container.winfo_children():
             widget.destroy()
-        frame = ControlFrame(self.container, self.img_array, self.coords)
+        frame = ControlFrame(self.container, self.coords)
         frame.tkraise()
 
 class ProcessPinHolesCenters():
     def __init__(self, imgs):
         self.imgs = imgs
         self.predictions = []
-        self.raw_coords = []
         self.coords_processed = []
         self.predict_cnn()
         self.transform_predictions_to_coords()
-        self.get_img_coords()
 
     def predict_cnn(self):
-        self.model_path = "./model_original_idea_best.tflite"
+        self.model_path = "./fixed_data.tflite"
         self.interpreter = Interpreter(self.model_path)
         self.interpreter.allocate_tensors()
 
@@ -446,7 +446,7 @@ class ProcessPinHolesCenters():
         output_details = self.interpreter.get_output_details()
 
         for sub_img in self.imgs:
-            self.interpreter.set_tensor(input_details[0]['index'], sub_img)
+            self.interpreter.set_tensor(input_details[0]['index'], np.expand_dims(sub_img, axis=0))
             self.interpreter.invoke()
             self.predictions.append(self.interpreter.get_tensor(output_details[0]['index']))
 
@@ -456,75 +456,70 @@ class ProcessPinHolesCenters():
         for i in range(1,10):
             for mx in range(80):
                 for my in range(80):
-                    channels = self.predictions[i-1][my][mx]
+                    channels = self.predictions[i-1][0][my][mx]
+
                     prob, x1, y1, x2, y2 = channels
 
                     if prob < threshold:
                         continue
 
-                    px1, py1 = ((mx * GRID_SIZE) + x1) // 3, ((my * GRID_SIZE) + y1) // 3
-                    px2, py2 = ((mx * GRID_SIZE) + x2) // 3, ((my * GRID_SIZE) + y2) // 3
+                    px1, py1 = int((mx * GRID_SIZE) + x1), int((my * GRID_SIZE) + y1)
+                    px2, py2 = int((mx * GRID_SIZE) + x2), int((my * GRID_SIZE) + y2)
+
+                    cx, cy, r = self.get_sub_image_center(self.imgs[i-1], px1, py1, px2, py2)
+
+                    if cx == -1:
+                        continue
+
+                    cx = cx // 3
+                    cy = cy // 3
 
                     if i == 2:
-                        px1, px2 = px1 + 213, px2 + 213
+                        cx += 213
+                        cy += 1
                     if i == 3:
-                        px1, px2 = px1 + 426, px2 + 426
+                        cx += 426
+                        cy += 1
                     if i == 4:
-                        py1, py2 = py1 + 213, py2 + 213
+                        cy += 217
                     if i == 5:
-                        px1, px2 = px1 + 213, px2 + 213
-                        py1, py2 = py1 + 213, py2 + 213
+                        cy += 217
+                        cx += 213
                     if i == 6:
-                        px1, px2 = px1 + 426, px2 + 426
-                        py1, py2 = py1 + 213, py2 + 426
+                        cx += 426
+                        cy += 217
                     if i == 7:
-                        py1, py2 = py1 + 426, py2 + 426
+                        cy += 431
                     if i == 8:
-                        px1, px2 = px1 + 213, px2 + 213
-                        py1, py2 = py1 + 426, py2 + 426
+                        cx += 213
+                        cy += 431
                     if i == 9:
-                        px1, px2 = px1 + 426, px2 + 426
-                        py1, py2 = py1 + 426, py2 + 426
+                        cx += 426
+                        cy += 431
 
-                    self.raw_coords.append(px1)
-                    self.raw_coords.append(py1)
-                    self.raw_coords.append(px2)
-                    self.raw_coords.append(py2)
+                    self.coords_processed.append((cx, cy, r))
 
-    def get_img_coords(self):
-        for i in range(0, len(self.raw_coords), 4):
-            # IMPORTANT: It seems that the coords in the csv are not in the order of x1,y1,x2,y2
-            x1, y1 = int(self.raw_coords[i]), int(self.raw_coords[i+1])
-            x2, y2 = int(self.raw_coords[i+2]), int(self.raw_coords[i+2])
-            half_x = (x2-x1) // 2
-            half_y = (y2-y1) // 2
-            # Big box to detect the center
-            x1 = x1 - half_x if x1 - half_x > 0 else 0
-            x2 = x2 + half_x
-            y1 = y1 - half_y if y1 - half_y > 0 else 0
-            y2 = y2 + half_y
-            self.get_sub_image_center(x1,y1,x2,y2)
-
-    def get_sub_image_center(self, x1, y1, x2, y2):
-        sub_image = self.image_bin_not[y1:y2, x1:x2]
+    def get_sub_image_center(self, img, x1, y1, x2, y2):
+        img_not = cv2.bitwise_not(img)
+        sub_image = img_not[y1:y2, x1:x2]
         detected_circles = cv2.HoughCircles(
                                 sub_image,
                                 cv2.HOUGH_GRADIENT, 1, 40,
                                 param1 = 50,
-                                param2 = 13,
+                                param2 = 3,
                                 minRadius = 5,
-                                maxRadius = 20
+                                maxRadius = 9
                             )
+        sub_image = cv2.merge((sub_image, sub_image, sub_image))
         try:
             for pt in detected_circles[0, :]:
                 # circle coords
                 a, b, r = int(pt[0]), int(pt[1]), int(pt[2])
                 new_x1 = x1 + a
                 new_y1 = y1 + b
-                self.coords_processed.append((new_x1, new_y1))
+                return (new_x1, new_y1, r)
         except:
-            pass
-
+            return (-1, -1, -1)
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
