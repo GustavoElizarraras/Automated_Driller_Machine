@@ -55,9 +55,7 @@ class MotorController(PinsSetup):
 
     def move_motor(self, pulses, direction, motor):
 
-        if motor == "driller":
-            GPIO.output(27, direction)
-        else:
+        if not motor == "driller":
 
             GPIO.output(self.motors[motor]["pins"][0], direction)
 
@@ -107,6 +105,13 @@ class MotorController(PinsSetup):
                         return
 
                 self.send_pulse(self.motors[motor]["pins"][1], motor)
+        else:
+            GPIO.output(27, direction)
+            while not GPIO.input(11):
+                GPIO.output(27, not direction)
+                # door
+                time.sleep(0.000005)
+
 
     def rebound_limit_switch(self, motor):
         GPIO.output(self.motors[motor]["pins"][0], False)
@@ -173,9 +178,9 @@ class MotorController(PinsSetup):
         # 5.4 is a hardcoded unit conversor (px/mm), 4.92 should be the real value
 
         if motor == "x" or motor == "y":
-            x, y = pixels
-            posx = x / 640
-            posy = y / 640
+            posx, posy = pixels
+            x = posx / 640
+            y = posy / 640
             pulsesx = int(1661.590361+6292.048193*x+(132.5-0.1315*posx-0.7548*posy+9.017e-5*(posx**2)+0.001072*posx*posy+0.00139*(posy**2)-6.27e-7*(posx**3)-7.266e-7*(posx**2)*posy-1.025e-6*posx*(posy**2)-9.297e-7*(posy**3)))
             pulsesy = int(8249.387309-5825.820569*y+(182.9-0.4563*posx-0.3153*posy+0.0002233*(posx**2)+0.0008337*posx*posy-3.802e-5*(posy**2)-1.106e-7*(posx**3)+5.377e-8*(posx**2)*posy-4.826e-7*(posy**2)*posx-5.642e-8*(posy**3)))
             return pulsesx, pulsesy
