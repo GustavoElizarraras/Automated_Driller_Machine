@@ -230,7 +230,6 @@ class ImageUtilsFrame(ttk.Frame):
             center = (coord[0], coord[1])
             radius = coord[2]
             color = (0,255,0)
-            cv2.circle(self.img_array, center, radius, color, 3)
             cv2.circle(self.img_array, center, 2, color, -1)
         self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
         self.draw_hole_number()
@@ -243,7 +242,7 @@ class ImageUtilsFrame(ttk.Frame):
 
     def draw_hole_number(self):
         for num, coord in self.holes.items():
-            cv2.putText(self.img_array, f"B{num[0]}", (coord[0]-10, coord[1]-11), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,135,160), 2)
+            cv2.putText(self.img_array, f"B{num[0]}", (coord[0]-10, coord[1]-11), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,135,160), 2)
 
 
 class ControlFrame(ImageUtilsFrame):
@@ -285,8 +284,7 @@ class ControlFrame(ImageUtilsFrame):
     def start_drilling(self):
         for coord in self.coords:
             x, y, _ = coord
-            x_pos = motor_controller.convert_pixels_to_pulses(x, "x")
-            y_pos = motor_controller.convert_pixels_to_pulses(y, "y")
+            x_pos, y_pos = motor_controller.convert_pixels_to_pulses((x,y), "x")
             motor_controller.move_x_y(x_pos, y_pos)
             motor_controller.drill()
             time.sleep(0.05)
@@ -482,23 +480,23 @@ class ProcessPinHolesCenters():
                     cx = cx // 3
                     cy = cy // 3
                     if i == 2:
-                        cx += 213
+                        cx += 214
                         cy += 1
                     if i == 3:
                         cx += 426
                         cy += 1
                     if i == 4:
-                        cy += 213
+                        cy += 214
                     if i == 5:
-                        cy += 213
-                        cx += 213
+                        cy += 214
+                        cx += 214
                     if i == 6:
                         cx += 426
-                        cy += 213
+                        cy += 214
                     if i == 7:
                         cy += 426
                     if i == 8:
-                        cx += 213
+                        cx += 214
                         cy += 426
                     if i == 9:
                         cx += 426
