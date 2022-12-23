@@ -67,8 +67,11 @@ class ImagePreprocessing():
                 sub_img = img_array[(j-1)*ym: (j*ym), (i-1)*xm: i*xm]
                 sub_img = cv2.resize(sub_img, (640, 640), interpolation= cv2.INTER_LINEAR)
                 _, sub_img = cv2.threshold(sub_img, 215, 255, cv2.THRESH_BINARY)
-                sub_img = cv2.bitwise_not(sub_img)
                 sub_img = sub_img.astype(np.float32)
+
+                image_center = tuple(np.array(sub_img.shape[1::-1]) / 2)
+                rot_mat = cv2.getRotationMatrix2D(image_center, 180, 1.0)
+                sub_img = cv2.warpAffine(sub_img, rot_mat, sub_img.shape[1::-1], flags=cv2.INTER_LINEAR)
                 imgs.append(np.expand_dims(sub_img, axis=-1))
         return imgs
 
@@ -193,8 +196,12 @@ class ImageInitializer():
         img_bin = cv2.resize(img_bin, (640, 640), interpolation= cv2.INTER_LINEAR)
         # _, img_bin = cv2.threshold(img_bin, 215, 255, cv2.THRESH_BINARY)
         _, img_bin = cv2.threshold(img_bin, 200, 255, cv2.THRESH_BINARY)
-        # img_bin = cv2.bitwise_not(img_bin)
         img_bin = img_bin.astype(np.uint8)
+
+        image_center = tuple(np.array(img_bin.shape[1::-1]) / 2)
+        rot_mat = cv2.getRotationMatrix2D(image_center, 180, 1.0)
+        img_bin = cv2.warpAffine(img_bin, rot_mat, img_bin.shape[1::-1], flags=cv2.INTER_LINEAR)
+
         cv2.imwrite(img_bin_path, img_bin)
 
 class ImageUtilsFrame(ttk.Frame):
@@ -456,8 +463,10 @@ class ProcessPinHolesCenters():
         for i in range(1,10):
             for mx in range(80):
                 for my in range(80):
+                    # print(i)
+                    # print(self.predictions[i-1].shape)
                     channels = self.predictions[i-1][0][my][mx]
-
+                    # print(channels.shape)
                     prob, x1, y1, x2, y2 = channels
 
                     if prob < threshold:
@@ -465,15 +474,13 @@ class ProcessPinHolesCenters():
 
                     px1, py1 = int((mx * GRID_SIZE) + x1), int((my * GRID_SIZE) + y1)
                     px2, py2 = int((mx * GRID_SIZE) + x2), int((my * GRID_SIZE) + y2)
-
+                    # print(px1, py1, px2, py2)
                     cx, cy, r = self.get_sub_image_center(self.imgs[i-1], px1, py1, px2, py2)
-
                     if cx == -1:
                         continue
-
+                    #cx, cy = ((mx * GRID_SIZE) + cx) // 3, ((my * GRID_SIZE) + cy) // 3
                     cx = cx // 3
                     cy = cy // 3
-
                     if i == 2:
                         cx += 213
                         cy += 1
@@ -481,36 +488,41 @@ class ProcessPinHolesCenters():
                         cx += 426
                         cy += 1
                     if i == 4:
-                        cy += 217
+                        cy += 213
                     if i == 5:
-                        cy += 217
+                        cy += 213
                         cx += 213
                     if i == 6:
                         cx += 426
-                        cy += 217
+                        cy += 213
                     if i == 7:
-                        cy += 431
+                        cy += 426
                     if i == 8:
                         cx += 213
-                        cy += 431
+                        cy += 426
                     if i == 9:
                         cx += 426
-                        cy += 431
+                        cy += 426
 
                     self.coords_processed.append((cx, cy, r))
 
     def get_sub_image_center(self, img, x1, y1, x2, y2):
-        img_not = cv2.bitwise_not(img)
-        sub_image = img_not[y1:y2, x1:x2]
-        detected_circles = cv2.HoughCircles(
-                                sub_image,
-                                cv2.HOUGH_GRADIENT, 1, 40,
-                                param1 = 50,
-                                param2 = 3,
-                                minRadius = 5,
-                                maxRadius = 9
+        #img_not = cv2.bitwise_not(img)
+        sub_image = img[y1:y2, x1:x2]
+        #sub_image = img_not[y1:y2, x1:x2]
+        sub_image = sub_image.astype(np.uint8)
+        try:
+            detected_circles = cv2.HoughCircles(
+                                    sub_image,
+                                    cv2.HOUGH_GRADIENT, 1, 40,
+                                    param1 = 50,
+                                    param2 = 1,
+                                    minRadius = 5,
+                                    maxRadius = 9
                             )
-        sub_image = cv2.merge((sub_image, sub_image, sub_image))
+        except:
+            return (-1, -1, -1)
+
         try:
             for pt in detected_circles[0, :]:
                 # circle coords
