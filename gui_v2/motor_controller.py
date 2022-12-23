@@ -43,6 +43,7 @@ class MotorController(PinsSetup):
             time.sleep(0.01)
             GPIO.output(pwm_pin, False)
             time.sleep(0.005)
+
         else:
             # 1KHz
             GPIO.output(pwm_pin, False)
@@ -54,54 +55,58 @@ class MotorController(PinsSetup):
 
     def move_motor(self, pulses, direction, motor):
 
-        GPIO.output(self.motors[motor]["pins"][0], direction)
+        if motor == "driller":
+            GPIO.output(27, direction)
+        else:
 
-        for _ in range(pulses):
+            GPIO.output(self.motors[motor]["pins"][0], direction)
 
-            self.motors["x"]["limit_race"] = 0
-            self.motors["y"]["limit_race"] = 0
-            self.motors["z"]["limit_race"] = 0
+            for _ in range(pulses):
 
-            if direction:
-                self.motors[motor]["position"] -= 1
-            else:
-                self.motors[motor]["position"] += 1
+                self.motors["x"]["limit_race"] = 0
+                self.motors["y"]["limit_race"] = 0
+                self.motors["z"]["limit_race"] = 0
 
-            if  self.motors["y"]["position"] > 11.5e4:
-                break
+                if direction:
+                    self.motors[motor]["position"] -= 1
+                else:
+                    self.motors[motor]["position"] += 1
 
-            if  self.motors["x"]["position"] > 8.5e3:
-                break
+                if  self.motors["y"]["position"] > 11.5e4:
+                    break
 
-            if  self.motors["z"]["position"] > 1100:
-                break
+                if  self.motors["x"]["position"] > 8.5e3:
+                    break
 
-            while not GPIO.input(11):
-                # door
-                time.sleep(0.000005)
+                if  self.motors["z"]["position"] > 1100:
+                    break
 
-            while GPIO.input(22):
-                self.motors["x"]["limit_race"] += 1
-                if self.motors["x"]["limit_race"] == 10 and GPIO.input(22):
-                    self.rebound_limit_switch("x")
-                    self.motors["x"]["position"] = 0
-                    return
+                while not GPIO.input(11):
+                    # door
+                    time.sleep(0.000005)
 
-            while GPIO.input(10):
-                self.motors["y"]["limit_race"] += 1
-                if self.motors["y"]["limit_race"] == 10 and GPIO.input(10):
-                    self.rebound_limit_switch("y")
-                    self.motors["y"]["position"] = 0
-                    return
+                while GPIO.input(22):
+                    self.motors["x"]["limit_race"] += 1
+                    if self.motors["x"]["limit_race"] == 10 and GPIO.input(22):
+                        self.rebound_limit_switch("x")
+                        self.motors["x"]["position"] = 0
+                        return
 
-            while GPIO.input(9):
-                self.motors["z"]["limit_race"] += 1
-                if self.motors["z"]["limit_race"] == 10 and GPIO.input(9):
-                    self.rebound_limit_switch("z")
-                    self.motors["z"]["position"] = 0
-                    return
+                while GPIO.input(10):
+                    self.motors["y"]["limit_race"] += 1
+                    if self.motors["y"]["limit_race"] == 10 and GPIO.input(10):
+                        self.rebound_limit_switch("y")
+                        self.motors["y"]["position"] = 0
+                        return
 
-            self.send_pulse(self.motors[motor]["pins"][1], motor)
+                while GPIO.input(9):
+                    self.motors["z"]["limit_race"] += 1
+                    if self.motors["z"]["limit_race"] == 10 and GPIO.input(9):
+                        self.rebound_limit_switch("z")
+                        self.motors["z"]["position"] = 0
+                        return
+
+                self.send_pulse(self.motors[motor]["pins"][1], motor)
 
     def rebound_limit_switch(self, motor):
         GPIO.output(self.motors[motor]["pins"][0], False)

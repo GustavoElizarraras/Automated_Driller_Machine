@@ -242,7 +242,7 @@ class ImageUtilsFrame(ttk.Frame):
 
     def draw_hole_number(self):
         for num, coord in self.holes.items():
-            cv2.putText(self.img_array, f"B{num[0]}", (coord[0]-10, coord[1]-11), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,135,160), 2)
+            cv2.putText(self.img_array, f"B{num[0]}", (coord[0]-10, coord[1]-11), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,135,160), 1)
 
 
 class ControlFrame(ImageUtilsFrame):
@@ -282,12 +282,14 @@ class ControlFrame(ImageUtilsFrame):
         frame.tkraise()
 
     def start_drilling(self):
+        motor_controller.move_motor(1, True, "driller")
         for coord in self.coords:
             x, y, _ = coord
             x_pos, y_pos = motor_controller.convert_pixels_to_pulses((x,y), "x")
             motor_controller.move_x_y(x_pos, y_pos)
             motor_controller.drill()
             time.sleep(0.05)
+        motor_controller.move_motor(1, False, "driller")
 
 class AddMovePCBHole(ImageUtilsFrame):
     def __init__(self, container, coords):
