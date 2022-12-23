@@ -73,6 +73,9 @@ class MotorController(PinsSetup):
             if  self.motors["x"]["position"] > 8.5e3:
                 break
 
+            if  self.motors["z"]["position"] > 1100:
+                break
+
             while not GPIO.input(11):
                 # door
                 time.sleep(0.000005)
@@ -144,8 +147,9 @@ class MotorController(PinsSetup):
         self.move_motor(pulses_y, direction_y, "y")
 
     def drill(self):
-        self.move_motor(500, False, "z")
-        self.move_motor(500, True, "z")
+        self.move_motor(600, False, "z")
+        time.sleep(1)
+        self.move_motor(600, True, "z")
 
     def set_grabber(self, width_pulses, grab=True):
         if grab:
@@ -163,11 +167,14 @@ class MotorController(PinsSetup):
         # for pistons is not clear, hardcoded 7 pulses = 1mm per side
         # 5.4 is a hardcoded unit conversor (px/mm), 4.92 should be the real value
 
-        # TODO: Implent correctly the pulses for the drilling sequence
         if motor == "x":
-            pulses = int(1611.590361 + (6292.048193*pixels // 640))
+            posx = pixels / 640
+            pulses = int(1661.590361+6292.048193*x+(132.5-0.1315*posx-0.7548*posy+9.017e-5*(posx**2)+0.001072*posx*posy+0.00139*(posy**2)-6.27e-7*(posx**3)-7.266e-7*(posx**2)*posy-1.025e-6*posx*(posy**2)-9.297e-7*(posy**3)))
+            #pulses = int(1611.590361 + (6292.048193*pixels // 640))
         elif motor == "y":
-            pulses = int(8219.387309 - (5825.820569*pixels // 640))
+            posy = pixels / 640
+            pulses = int(8249.387309-5825.820569*y+(182.9-0.4563*posx-0.3153*posy+0.0002233*(posx**2)+0.0008337*posx*posy-3.802e-5*(posy**2)-1.106e-7*(posx**3)+5.377e-8*(posx**2)*posy-4.826e-7*(posy**2)*posx-5.642e-8*(posy**3)))
+            #pulses = int(8219.387309 - (5825.820569*pixels // 640))
         elif motor == "pistons":
             pulses = int((130 - (pixels / 5.4 )) * 5.25)
         return pulses

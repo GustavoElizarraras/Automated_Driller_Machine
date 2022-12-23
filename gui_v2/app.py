@@ -284,7 +284,7 @@ class ControlFrame(ImageUtilsFrame):
 
     def start_drilling(self):
         for coord in self.coords:
-            x, y = coord
+            x, y, _ = coord
             x_pos = motor_controller.convert_pixels_to_pulses(x, "x")
             y_pos = motor_controller.convert_pixels_to_pulses(y, "y")
             motor_controller.move_x_y(x_pos, y_pos)
