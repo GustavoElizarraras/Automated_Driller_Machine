@@ -168,11 +168,13 @@ class MotorController(PinsSetup):
         # 5.4 is a hardcoded unit conversor (px/mm), 4.92 should be the real value
 
         if motor == "x":
-            posx = pixels / 640
+            x = pixels
+            posx = x / 640
             pulses = int(1661.590361+6292.048193*x+(132.5-0.1315*posx-0.7548*posy+9.017e-5*(posx**2)+0.001072*posx*posy+0.00139*(posy**2)-6.27e-7*(posx**3)-7.266e-7*(posx**2)*posy-1.025e-6*posx*(posy**2)-9.297e-7*(posy**3)))
             #pulses = int(1611.590361 + (6292.048193*pixels // 640))
         elif motor == "y":
-            posy = pixels / 640
+            y = pixels
+            posy = y / 640
             pulses = int(8249.387309-5825.820569*y+(182.9-0.4563*posx-0.3153*posy+0.0002233*(posx**2)+0.0008337*posx*posy-3.802e-5*(posy**2)-1.106e-7*(posx**3)+5.377e-8*(posx**2)*posy-4.826e-7*(posy**2)*posx-5.642e-8*(posy**3)))
             #pulses = int(8219.387309 - (5825.820569*pixels // 640))
         elif motor == "pistons":

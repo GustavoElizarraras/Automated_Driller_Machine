@@ -458,7 +458,7 @@ class ProcessPinHolesCenters():
             self.predictions.append(self.interpreter.get_tensor(output_details[0]['index']))
 
     def transform_predictions_to_coords(self):
-        threshold = 0.5
+        threshold = 0.55
         GRID_SIZE = 8
         for i in range(1,10):
             for mx in range(80):
