@@ -1,5 +1,6 @@
-from picamera import PiCamera
 from tflite_runtime.interpreter import Interpreter
+from skimage.filters import unsharp_mask
+from picamera import PiCamera
 import motor_controller as mc
 import tkinter as tk
 from tkinter import ttk
@@ -49,16 +50,19 @@ class ImagePreprocessing():
         self.img_path = img_path
         self.img_array = cv2.imread(img_path, 0)
 
-    def crop_rotate(self, crops_coords, angle):
-        y1, y2, x1, x2 = crops_coords
-        self.img_array = self.img_array[y1: y2, x1: x2]
-        image_center = tuple(np.array(self.img_array.shape[1::-1]) / 2)
+    def crop_rotate(self, img, crops_coords=None, angle=0):
+        if crops_coords:
+            y1, y2, x1, x2 = crops_coords
+            img = img[y1: y2, x1: x2]
+        image_center = tuple(np.array(img.shape[1::-1]) / 2)
         rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
-        self.img_array = cv2.warpAffine(self.img_array, rot_mat, self.img_array.shape[1::-1], flags=cv2.INTER_LINEAR)
-        return self.img_array
+        img = cv2.warpAffine(img, rot_mat, img.shape[1::-1], flags=cv2.INTER_LINEAR)
+        return img
 
     def do_multiple_images(self):
-        img_array = self.crop_rotate((700,1660,550,1540), -2.75)
+        img_array = self.crop_rotate(self.img_array, crops_coords=(700,1660,550,1540), angle=-2.75)
+        img_array = self.crop_rotate(img_array, crops_coords=None, angle=180)
+        _, img_array = cv2.threshold(img_array, 215, 255, cv2.THRESH_BINARY)
         ym = img_array.shape[0] // 3
         xm = img_array.shape[1] // 3
         imgs = []
@@ -66,12 +70,11 @@ class ImagePreprocessing():
             for i in range(1,4):
                 sub_img = img_array[(j-1)*ym: (j*ym), (i-1)*xm: i*xm]
                 sub_img = cv2.resize(sub_img, (640, 640), interpolation= cv2.INTER_LINEAR)
-                _, sub_img = cv2.threshold(sub_img, 215, 255, cv2.THRESH_BINARY)
+                # if the binary image has the pin holes color black, invert it:
+                sub_img = cv2.bitwise_not(sub_img)
+                sub_img = cv2.medianBlur(sub_img, 5)
+                sub_img = unsharp_mask(sub_img, radius=5, amount=11)
                 sub_img = sub_img.astype(np.float32)
-
-                image_center = tuple(np.array(sub_img.shape[1::-1]) / 2)
-                rot_mat = cv2.getRotationMatrix2D(image_center, 180, 1.0)
-                sub_img = cv2.warpAffine(sub_img, rot_mat, sub_img.shape[1::-1], flags=cv2.INTER_LINEAR)
                 imgs.append(np.expand_dims(sub_img, axis=-1))
         return imgs
 
