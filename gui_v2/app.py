@@ -189,20 +189,21 @@ class ImageInitializer():
 
         # PCB Image
         self.img_path = img_path
-        # Processing the img of the home position
-
-        self.prep_img_home = ImagePreprocessing(self.img_path)
+        # Processing and saving the img of the home position
+        self.save_processed_home_img()
+        img_processed_home_path = pi_camera.get_last_img_dir()
+        self.prep_img_home = ImagePreprocessing(img_processed_home_path)
         # getting 9 zoomed imgs from the photo taken in home
         self.imgs_array = self.prep_img_home.do_multiple_images()
         # calling the tensorflow lite interpreter on those 9 images
         self.pin_holes = ProcessPinHolesCenters(self.imgs_array)
         # getting the precise centers of the detected pin holes
         self.coords = self.pin_holes.coords_processed
-        self.save_processed_home_img()
 
     def save_processed_home_img(self):
+        prep_img_home = ImagePreprocessing(self.img_path)
         # Getting the last img taken by the raspberry
-        orig_img_gui = self.prep_img_home.img_array
+        orig_img_gui = prep_img_home.img_array
         # preprocessing
         img_gui = self.prep_img_home.crop_rotate(orig_img_gui, (700,1660,550,1540), -2.75)
         img_gui = self.prep_img_home.crop_rotate(img_gui, None, 180)
@@ -492,19 +493,19 @@ class ProcessPinHolesCenters():
                     cx = cx // 3
                     cy = cy // 3
                     if i == 2:
-                        cx += 214
+                        cx += 213
                         cy += 1
                     if i == 3:
                         cx += 426
                         cy += 1
                     if i == 4:
-                        cy += 214
+                        cy += 213
                     if i == 5:
-                        cy += 214
-                        cx += 214
+                        cy += 213
+                        cx += 213
                     if i == 6:
                         cx += 426
-                        cy += 214
+                        cy += 213
                     if i == 7:
                         cy += 426
                     if i == 8:
