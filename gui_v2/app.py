@@ -154,7 +154,9 @@ class CalculateWidth(ttk.Frame):
     def do_sequence(self):
         pi_camera.take_photo()
         img_path = pi_camera.get_last_img_dir()
-        self.img_array = ImagePreprocessing(img_path).crop_rotate((0,1025,500,1525), -2.75)
+        grab_processing = ImagePreprocessing(img_path)
+        img_ = grab_processing.img_array
+        self.img_array = grab_processing.crop_rotate(img_, (0,1025,500,1525), -2.75)
         self.img_array = cv2.resize(self.img_array, (640, 640), interpolation= cv2.INTER_LINEAR)
         width_px = self.get_pcb_width()
         pulses = motor_controller.convert_pixels_utils(width_px, "pistons")
