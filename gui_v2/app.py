@@ -99,7 +99,7 @@ class CalculateWidth(ttk.Frame):
         time.sleep(1)
         motor_controller.move_y_to_user()
         # table up
-        motor_controller.move_motor(290, False, "table")
+        motor_controller.move_motor(295, False, "table")
 
     def create_widgets(self):
         # release or grab harder methods
@@ -152,13 +152,12 @@ class CalculateWidth(ttk.Frame):
         return x2 - x1
 
     def do_sequence(self):
-        # TODO: finish sequence with pulses
         pi_camera.take_photo()
         img_path = pi_camera.get_last_img_dir()
         self.img_array = ImagePreprocessing(img_path).crop_rotate((0,1025,500,1525), -2.75)
         self.img_array = cv2.resize(self.img_array, (640, 640), interpolation= cv2.INTER_LINEAR)
         width_px = self.get_pcb_width()
-        pulses = motor_controller.convert_pixels_to_pulses(width_px, "pistons")
+        pulses = motor_controller.convert_pixels_utils(width_px, "pistons")
         if pulses > 700:
             pulses = 700
         motor_controller.set_grabber(pulses, grab=True)
@@ -186,26 +185,33 @@ class CalculateWidth(ttk.Frame):
 class ImageInitializer():
     def __init__(self, img_path):
 
-        self.img_path = img_path
         # PCB Image
-        # gray image of the pcb that takes the camera
-        self.imgs_array = ImagePreprocessing(self.img_path).do_multiple_images()
+        self.img_path = img_path
+        # Processing the img of the home position
+
+        self.prep_img_home = ImagePreprocessing(self.img_path)
+        # getting 9 zoomed imgs from the photo taken in home
+        self.imgs_array = self.prep_img_home.do_multiple_images()
+        # calling the tensorflow lite interpreter on those 9 images
         self.pin_holes = ProcessPinHolesCenters(self.imgs_array)
+        # getting the precise centers of the detected pin holes
         self.coords = self.pin_holes.coords_processed
+        self.save_processed_home_img()
 
-
-        img_bin_path = pi_camera.get_new_path()
-        img_bin = ImagePreprocessing(self.img_path).crop_rotate((700,1660,550,1540), -2.75)
-        img_bin = cv2.resize(img_bin, (640, 640), interpolation= cv2.INTER_LINEAR)
-        # _, img_bin = cv2.threshold(img_bin, 215, 255, cv2.THRESH_BINARY)
-        _, img_bin = cv2.threshold(img_bin, 200, 255, cv2.THRESH_BINARY)
-        img_bin = img_bin.astype(np.uint8)
-
-        image_center = tuple(np.array(img_bin.shape[1::-1]) / 2)
-        rot_mat = cv2.getRotationMatrix2D(image_center, 180, 1.0)
-        img_bin = cv2.warpAffine(img_bin, rot_mat, img_bin.shape[1::-1], flags=cv2.INTER_LINEAR)
-
-        cv2.imwrite(img_bin_path, img_bin)
+    def save_processed_home_img(self):
+        # Getting the last img taken by the raspberry
+        orig_img_gui = self.prep_img_home.img_array
+        # preprocessing
+        img_gui = self.prep_img_home.crop_rotate(orig_img_gui, (700,1660,550,1540), -2.75)
+        img_gui = self.prep_img_home.crop_rotate(img_gui, None, 180)
+        img_gui = cv2.resize(img_gui, (640, 640), interpolation= cv2.INTER_LINEAR)
+        # Binarizing
+        _, img_gui = cv2.threshold(img_gui, 200, 255, cv2.THRESH_BINARY)
+        # # _, img_gui = cv2.threshold(img_gui, 215, 255, cv2.THRESH_BINARY)
+        img_gui = img_gui.astype(np.uint8)
+        # Saving in a new path for the GUI to display easier
+        img_gui_path = pi_camera.get_new_path()
+        cv2.imwrite(img_gui_path, img_gui)
 
 class ImageUtilsFrame(ttk.Frame):
     def __init__(self, container, coords):
@@ -220,7 +226,7 @@ class ImageUtilsFrame(ttk.Frame):
         self.coords = coords
         # pin-holes identifiers
         self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
-        self.show_green_holes()
+        self.show_red_centers()
 
     def render_img(self, img_array, binding=None):
         self.render = ImageTk.PhotoImage(Image.fromarray(img_array))
@@ -228,11 +234,10 @@ class ImageUtilsFrame(ttk.Frame):
         self.img_label.place(x = 0, y = 0)
         self.img_label.bind("<Button-1>", binding)
 
-    def show_green_holes(self, binding=None):
+    def show_red_centers(self, binding=None):
         for coord in self.coords:
             center = (coord[0], coord[1])
-            radius = coord[2]
-            color = (0,255,0)
+            color = (255,0,0)
             cv2.circle(self.img_array, center, 2, color, -1)
         self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
         self.draw_hole_number()
@@ -245,8 +250,7 @@ class ImageUtilsFrame(ttk.Frame):
 
     def draw_hole_number(self):
         for num, coord in self.holes.items():
-            cv2.putText(self.img_array, f"B{num[0]}", (coord[0]-10, coord[1]-11), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,135,160), 1)
-
+            cv2.putText(self.img_array, f"B{num[0]}", (coord[0]-10, coord[1]-11), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,135,160), 1)
 
 class ControlFrame(ImageUtilsFrame):
     def __init__(self, container, coords):
@@ -287,8 +291,9 @@ class ControlFrame(ImageUtilsFrame):
     def start_drilling(self):
         motor_controller.move_motor(1, True, "driller")
         for coord in self.coords:
+            motor_controller.move_motor(1, True, "driller")
             x, y, _ = coord
-            x_pos, y_pos = motor_controller.convert_pixels_to_pulses((x,y), "x")
+            x_pos, y_pos = motor_controller.convert_pixels_utils((x,y), "x")
             motor_controller.move_x_y(x_pos, y_pos)
             motor_controller.drill()
             time.sleep(0.05)
@@ -329,7 +334,7 @@ class AddMovePCBHole(ImageUtilsFrame):
         self.selected_hole_name = self.listbox.curselection()
         self.posx, self.posy = self.holes[self.selected_hole_name][0], self.holes[self.selected_hole_name][1]
         self.radius = self.holes[self.selected_hole_name][2]
-        self.show_green_holes()
+        self.show_red_centers()
         self.colour_selected((self.posx, self.posy), (255,227,51), self.radius)
         #self.holes.pop(self.selected_hole_name)
 
@@ -379,7 +384,7 @@ class AddMovePCBHole(ImageUtilsFrame):
         self.coords.append((event.x, event.y, 9))
         self.listbox.destroy()
         self.create_widgets()
-        self.show_green_holes(binding=self.new_circle)
+        self.show_red_centers(binding=self.new_circle)
 
     def return_main(self):
         for widget in self.container.winfo_children():
@@ -414,7 +419,7 @@ class DeletePCBHole(ImageUtilsFrame):
         self.selected_hole_name = self.listbox.curselection()
         self.center = (self.holes[self.selected_hole_name][0], self.holes[self.selected_hole_name][1])
         self.radius = self.holes[self.selected_hole_name][2]
-        self.show_green_holes()
+        self.show_red_centers()
         self.colour_selected(self.center, (255,0,255), self.radius)
 
     def delete_selected(self):
