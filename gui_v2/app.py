@@ -60,9 +60,7 @@ class ImagePreprocessing():
         return img
 
     def do_multiple_images(self):
-        img_array = self.crop_rotate(self.img_array, crops_coords=(700,1660,550,1540), angle=-2.75)
-        img_array = self.crop_rotate(img_array, crops_coords=None, angle=180)
-        _, img_array = cv2.threshold(img_array, 215, 255, cv2.THRESH_BINARY)
+        _, img_array = cv2.threshold(self.img_array, 230, 255, cv2.THRESH_BINARY)
         ym = img_array.shape[0] // 3
         xm = img_array.shape[1] // 3
         imgs = []
@@ -71,7 +69,7 @@ class ImagePreprocessing():
                 sub_img = img_array[(j-1)*ym: (j*ym), (i-1)*xm: i*xm]
                 sub_img = cv2.resize(sub_img, (640, 640), interpolation= cv2.INTER_LINEAR)
                 # if the binary image has the pin holes color black, invert it:
-                sub_img = cv2.bitwise_not(sub_img)
+                # sub_img = cv2.bitwise_not(sub_img)
                 sub_img = cv2.medianBlur(sub_img, 5)
                 sub_img = unsharp_mask(sub_img, radius=5, amount=11)
                 sub_img = sub_img.astype(np.float32)
@@ -205,11 +203,12 @@ class ImageInitializer():
         # Getting the last img taken by the raspberry
         orig_img_gui = prep_img_home.img_array
         # preprocessing
-        img_gui = self.prep_img_home.crop_rotate(orig_img_gui, (700,1660,550,1540), -2.75)
-        img_gui = self.prep_img_home.crop_rotate(img_gui, None, 180)
+        img_gui = prep_img_home.crop_rotate(orig_img_gui, (700,1660,550,1540), -2.75)
+        img_gui = prep_img_home.crop_rotate(img_gui, None, 180)
         img_gui = cv2.resize(img_gui, (640, 640), interpolation= cv2.INTER_LINEAR)
         # Binarizing
-        _, img_gui = cv2.threshold(img_gui, 200, 255, cv2.THRESH_BINARY)
+        _, img_gui = cv2.threshold(img_gui, 215, 255, cv2.THRESH_BINARY)
+        img_gui = cv2.bitwise_not(img_gui)
         # # _, img_gui = cv2.threshold(img_gui, 215, 255, cv2.THRESH_BINARY)
         img_gui = img_gui.astype(np.uint8)
         # Saving in a new path for the GUI to display easier
@@ -469,15 +468,12 @@ class ProcessPinHolesCenters():
             self.predictions.append(self.interpreter.get_tensor(output_details[0]['index']))
 
     def transform_predictions_to_coords(self):
-        threshold = 0.55
+        threshold = 0.6
         GRID_SIZE = 8
         for i in range(1,10):
             for mx in range(80):
                 for my in range(80):
-                    # print(i)
-                    # print(self.predictions[i-1].shape)
                     channels = self.predictions[i-1][0][my][mx]
-                    # print(channels.shape)
                     prob, x1, y1, x2, y2 = channels
 
                     if prob < threshold:
@@ -485,8 +481,9 @@ class ProcessPinHolesCenters():
 
                     px1, py1 = int((mx * GRID_SIZE) + x1), int((my * GRID_SIZE) + y1)
                     px2, py2 = int((mx * GRID_SIZE) + x2), int((my * GRID_SIZE) + y2)
-                    # print(px1, py1, px2, py2)
+
                     cx, cy, r = self.get_sub_image_center(self.imgs[i-1], px1, py1, px2, py2)
+
                     if cx == -1:
                         continue
                     #cx, cy = ((mx * GRID_SIZE) + cx) // 3, ((my * GRID_SIZE) + cy) // 3
@@ -509,7 +506,7 @@ class ProcessPinHolesCenters():
                     if i == 7:
                         cy += 426
                     if i == 8:
-                        cx += 214
+                        cx += 213
                         cy += 426
                     if i == 9:
                         cx += 426
@@ -518,9 +515,7 @@ class ProcessPinHolesCenters():
                     self.coords_processed.append((cx, cy, r))
 
     def get_sub_image_center(self, img, x1, y1, x2, y2):
-        #img_not = cv2.bitwise_not(img)
         sub_image = img[y1:y2, x1:x2]
-        #sub_image = img_not[y1:y2, x1:x2]
         sub_image = sub_image.astype(np.uint8)
         try:
             detected_circles = cv2.HoughCircles(
