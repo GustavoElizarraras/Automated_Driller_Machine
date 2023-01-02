@@ -1,7 +1,7 @@
-from tflite_runtime.interpreter import Interpreter
-from skimage.filters import unsharp_mask
-from picamera import PiCamera
-import motor_controller as mc
+# from tflite_runtime.interpreter import Interpreter
+# from skimage.filters import unsharp_mask
+# from picamera import PiCamera
+# import motor_controller as mc
 import tkinter as tk
 from tkinter import ttk
 from functools import partial
@@ -95,11 +95,11 @@ class CalculateWidth(ttk.Frame):
         self.img_array = None
         self.container = container
         self.create_widgets()
-        motor_controller.go_default_position()
+        #motor_controller.go_default_position()
         time.sleep(1)
         #motor_controller.move_y_to_user()
         # table up
-        motor_controller.move_motor(295, False, "table")
+        #motor_controller.move_motor(295, False, "table")
 
     def create_widgets(self):
         # release or grab harder methods
@@ -124,7 +124,7 @@ class CalculateWidth(ttk.Frame):
         self.release_button.configure(command=self.release)
         # Go to Controller Frame
         self.next_button = ttk.Button(self.container, text='Detectar barrenos', style='Accent.TButton')
-        self.next_button.place(x = 400, y = 400)
+        self.next_button.place(x = 396, y = 400)
         self.next_button.configure(command=self.display_control_panel_panel)
 
     def get_pcb_width(self):
@@ -173,15 +173,15 @@ class CalculateWidth(ttk.Frame):
 
     def display_control_panel_panel(self):
         # table down
-        motor_controller.move_motor(300, True, "table")
-        time.sleep(0.5)
-        motor_controller.go_home()
-        pi_camera.take_photo()
-        img_home_path = pi_camera.get_last_img_dir()
-        image_home = ImageInitializer(img_home_path)
+        #motor_controller.move_motor(300, True, "table")
+        #time.sleep(0.5)
+        #motor_controller.go_home()
+        #pi_camera.take_photo()
+        #img_home_path = pi_camera.get_last_img_dir()
+        #image_home = ImageInitializer(img_home_path)
         for widget in self.container.winfo_children():
             widget.destroy()
-        frame = ControlFrame(self.container, image_home.coords)
+        frame = ControlFrame(self.container, [(1,1,1)])
         frame.tkraise()
 
 class ImageInitializer():
@@ -222,10 +222,11 @@ class ImageUtilsFrame(ttk.Frame):
         super().__init__(container)
         self.container = container
 
-        self.img_path = pi_camera.get_last_img_dir()
+        #self.img_path = pi_camera.get_last_img_dir()
         # PCB Image
         # binarized image of the pcb that takes the camera
-        self.img_array = cv2.imread(self.img_path, 0)
+        # self.img_array = cv2.imread(self.img_path, 0)
+        self.img_array = cv2.imread("gui_v2/img_212.jpg", 0)
         self.img_array = cv2.merge([self.img_array, self.img_array, self.img_array])
         self.coords = coords
         # pin-holes identifiers
@@ -264,19 +265,19 @@ class ControlFrame(ImageUtilsFrame):
     def create_widgets(self):
 
         # button
-        self.move_button = ttk.Button(self.container, text='Añadir o Mover barreno')
-        self.move_button.place(x = 700, y = 10)
+        self.move_button = ttk.Button(self.container, text='Añadir o Mover barreno', style='Accent.TButton')
+        self.move_button.place(x = 700, y = 200)
         self.move_button.configure(command=self.press_move_add)
 
         # button
-        self.del_button = ttk.Button(self.container, text='Eliminar barreno')
-        self.del_button.place(x = 700, y = 50)
+        self.del_button = ttk.Button(self.container, text='Eliminar barreno', style='Accent.TButton')
+        self.del_button.place(x = 724, y = 250)
         self.del_button.configure(command=self.press_delete)
 
         # button
-        self.del_button = ttk.Button(self.container, text='Iniciar barrenado')
-        self.del_button.place(x = 700, y = 90)
-        self.del_button.configure(command=self.start_drilling)
+        self.start_button = ttk.Button(self.container, text='Iniciar barrenado', style='Accent.TButton')
+        self.start_button.place(x = 723, y = 400)
+        self.start_button.configure(command=self.start_drilling)
 
     def clear_frame(self):
         for widget in self.container.winfo_children():
@@ -314,10 +315,10 @@ class AddMovePCBHole(ImageUtilsFrame):
         self.insert_cursor()
 
     def create_widgets(self):
-        self.instructions = tk.Text(self.master, height=8, width=28)
-        text='Para añadir un barreno da \nclick sobre la imagen, para mover un barreno, seleccionael barreno y presiona los \nbotones correspondientes'
+        self.instructions = tk.Text(self.master, height=5, width=25, font=('Times New Roman', 13))
+        text='Para añadir un barreno da click \nsobre la imagen, para mover un \nbarreno, seleccionalo y \npresiona los botones \ncorrespondientes'
         self.instructions.insert("e", text)
-        self.instructions.place(x = 680, y = 10)
+        self.instructions.place(x = 660, y = 10)
 
         self.holes = { (i,):coord for i, coord in enumerate(self.coords)}
         self.langs_var = tk.StringVar(value=[f"Barreno {i}" for i in range(len(self.holes.keys()))])
@@ -325,12 +326,12 @@ class AddMovePCBHole(ImageUtilsFrame):
             self.container,
             listvariable=self.langs_var,
             height=6)
-        self.listbox.place(x = 700, y = 130)
+        self.listbox.place(x = 660, y = 130)
         self.listbox.bind('<<ListboxSelect>>', self.move_selected)
 
         # button
         self.return_button = ttk.Button(self.container, text='Volver')
-        self.return_button.place(x = 700, y = 420)
+        self.return_button.place(x = 660, y = 450)
         self.return_button.configure(command=self.return_main)
 
     def move_selected(self, event):
@@ -349,17 +350,17 @@ class AddMovePCBHole(ImageUtilsFrame):
         self.move_left = partial(self.move_pin_hole, "left")
         self.move_right = partial(self.move_pin_hole, "right")
         # buttons
-        self.button_up = ttk.Button(self.container, text='arriba', command=self.move_up)
-        self.button_up.place(x = 700, y = 250)
+        self.button_up = ttk.Button(self.container, text='arriba', command=self.move_up, style='Accent.TButton')
+        self.button_up.place(x = 660, y = 280)
 
-        self.button_down = ttk.Button(self.container, text='abajo', command=self.move_down)
-        self.button_down.place(x = 700, y = 290)
+        self.button_down = ttk.Button(self.container, text='abajo', command=self.move_down, style='Accent.TButton')
+        self.button_down.place(x = 660, y = 320)
 
-        self.button_left = ttk.Button(self.container, text='izquierda', command=self.move_left)
-        self.button_left.place(x = 700, y = 330)
+        self.button_left = ttk.Button(self.container, text='izquierda', command=self.move_left, style='Accent.TButton')
+        self.button_left.place(x = 660, y = 360)
 
-        self.button_right = ttk.Button(self.container, text='derecha', command=self.move_right)
-        self.button_right.place(x = 700, y = 370)
+        self.button_right = ttk.Button(self.container, text='derecha', command=self.move_right, style='Accent.TButton')
+        self.button_right.place(x = 660, y = 400)
 
     def move_pin_hole(self, direction):
         self.img_label.destroy()
@@ -403,19 +404,19 @@ class DeletePCBHole(ImageUtilsFrame):
         self.create_listbox()
 
     def create_widgets(self):
-        self.instructions = tk.Text(self.master, height=2, width=30)
+        self.instructions = tk.Text(self.master, height=2, width=25, font=('Times New Roman', 13))
         text='Selecciona y presiona eliminar'
         self.instructions.insert("e", text)
-        self.instructions.place(x = 680, y = 10)
+        self.instructions.place(x = 660, y = 10)
 
         # button
-        self.delete_button = ttk.Button(self.container, text='Eliminar')
-        self.delete_button.place(x = 700, y = 180)
+        self.delete_button = ttk.Button(self.container, text='Eliminar', style='Accent.TButton')
+        self.delete_button.place(x = 660, y = 200)
         self.delete_button.configure(command=self.delete_selected)
 
         # button
         self.return_button = ttk.Button(self.container, text='Volver')
-        self.return_button.place(x = 700, y = 230)
+        self.return_button.place(x = 660, y = 250)
         self.return_button.configure(command=self.return_main)
 
     def select(self, event):
@@ -438,7 +439,7 @@ class DeletePCBHole(ImageUtilsFrame):
             self.container,
             listvariable=self.langs_var,
             height=6)
-        self.listbox.place(x = 700, y = 60)
+        self.listbox.place(x = 660, y = 60)
         self.listbox.bind('<<ListboxSelect>>', self.select)
         self.create_widgets()
 
