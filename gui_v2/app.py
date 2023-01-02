@@ -72,6 +72,8 @@ class ImagePreprocessing():
                 # sub_img = cv2.bitwise_not(sub_img)
                 sub_img = cv2.medianBlur(sub_img, 5)
                 sub_img = unsharp_mask(sub_img, radius=5, amount=11)
+                sub_img *= 255
+                np.floor(sub_img)
                 sub_img = sub_img.astype(np.float32)
                 imgs.append(np.expand_dims(sub_img, axis=-1))
         return imgs
@@ -95,7 +97,7 @@ class CalculateWidth(ttk.Frame):
         self.create_widgets()
         motor_controller.go_default_position()
         time.sleep(1)
-        motor_controller.move_y_to_user()
+        #motor_controller.move_y_to_user()
         # table up
         motor_controller.move_motor(295, False, "table")
 
@@ -104,26 +106,26 @@ class CalculateWidth(ttk.Frame):
         self.release = partial(self.adjust_grab, "release")
         self.grab_harder = partial(self.adjust_grab, "harder")
 
-        self.instructions = tk.Text(self.master, height=1, width=70)
+        self.instructions = tk.Text(self.container, height=1, width=65, font=('Times New Roman', 15))
         text = 'Coloque la placa en el centro de la mesa y presione el botón "Sujetar PCB"'
         self.instructions.insert("e", text)
-        self.instructions.place(x = 200, y = 100)
+        self.instructions.place(x = 160, y = 100)
         # grab button
-        self.start_button = ttk.Button(self.container, text='Sujetar PCB')
-        self.start_button.place(x = 390, y = 130)
-        self.start_button.configure(command=self.do_sequence)
+        self.grab_button = ttk.Button(self.container, text='Sujetar PCB', style='Accent.TButton')
+        self.grab_button.place(x = 415, y = 150)
+        self.grab_button.configure(command=self.do_sequence)
         # grab harder button
-        self.start_button = ttk.Button(self.container, text='Incrementar presión')
-        self.start_button.place(x = 390, y = 440)
-        self.start_button.configure(command=self.grab_harder)
+        self.harder_button = ttk.Button(self.container, text='Incrementar presión', style='Accent.TButton')
+        self.harder_button.place(x = 390, y = 200)
+        self.harder_button.configure(command=self.grab_harder)
         # release grabber button
-        self.start_button = ttk.Button(self.container, text='Liberar presión')
-        self.start_button.place(x = 390, y = 470)
-        self.start_button.configure(command=self.release)
+        self.release_button = ttk.Button(self.container, text='Liberar presión', style='Accent.TButton')
+        self.release_button.place(x = 405, y = 250)
+        self.release_button.configure(command=self.release)
         # Go to Controller Frame
-        self.start_button = ttk.Button(self.container, text='Detectar barrenos')
-        self.start_button.place(x = 390, y = 515)
-        self.start_button.configure(command=self.display_control_panel_panel)
+        self.next_button = ttk.Button(self.container, text='Detectar barrenos', style='Accent.TButton')
+        self.next_button.place(x = 400, y = 400)
+        self.next_button.configure(command=self.display_control_panel_panel)
 
     def get_pcb_width(self):
         _, self.img_array = cv2.threshold(self.img_array, 210 , 255, cv2.THRESH_BINARY)
@@ -547,8 +549,10 @@ class App(tk.Tk):
 
 if __name__ == "__main__":
 
-    motor_controller = mc.MotorController()
-    pi_camera = PiCameraPhoto()
+    #motor_controller = mc.MotorController()
+    #pi_camera = PiCameraPhoto()
     app = App()
+    app.tk.call("source", "gui_v2/azure.tcl")
+    app.tk.call("set_theme", "light")
     CalculateWidth(app)
     app.mainloop()
