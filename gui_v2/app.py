@@ -1,7 +1,7 @@
-# from tflite_runtime.interpreter import Interpreter
-# from skimage.filters import unsharp_mask
-# from picamera import PiCamera
-# import motor_controller as mc
+from tflite_runtime.interpreter import Interpreter
+from skimage.filters import unsharp_mask
+from picamera import PiCamera
+import motor_controller as mc
 import tkinter as tk
 from tkinter import ttk
 from functools import partial
@@ -59,6 +59,12 @@ class ImagePreprocessing():
         img = cv2.warpAffine(img, rot_mat, img.shape[1::-1], flags=cv2.INTER_LINEAR)
         return img
 
+    def crop_resize_home(self):
+        img_home = self.crop_rotate(self.img_array, (700,1660,550,1540), -2.75)
+        img_home = self.crop_rotate(img_home, None, 180)
+        img_home = cv2.resize(img_home, (640, 640), interpolation= cv2.INTER_LINEAR)
+        return img_home
+
     def do_multiple_images(self):
         _, img_array = cv2.threshold(self.img_array, 230, 255, cv2.THRESH_BINARY)
         ym = img_array.shape[0] // 3
@@ -95,11 +101,11 @@ class CalculateWidth(ttk.Frame):
         self.img_array = None
         self.container = container
         self.create_widgets()
-        #motor_controller.go_default_position()
+        motor_controller.go_default_position()
         time.sleep(1)
-        #motor_controller.move_y_to_user()
+        motor_controller.move_y_to_user()
         # table up
-        #motor_controller.move_motor(295, False, "table")
+        motor_controller.move_motor(295, False, "table")
 
     def create_widgets(self):
         # release or grab harder methods
@@ -173,24 +179,24 @@ class CalculateWidth(ttk.Frame):
 
     def display_control_panel_panel(self):
         # table down
-        #motor_controller.move_motor(300, True, "table")
-        #time.sleep(0.5)
-        #motor_controller.go_home()
-        #pi_camera.take_photo()
-        #img_home_path = pi_camera.get_last_img_dir()
-        #image_home = ImageInitializer(img_home_path)
+        motor_controller.move_motor(300, True, "table")
+        time.sleep(0.5)
+        motor_controller.go_home()
+        pi_camera.take_photo()
+        img_home_path = pi_camera.get_last_img_dir()
+        image_home = ImageInitializer(img_home_path)
         for widget in self.container.winfo_children():
             widget.destroy()
-        frame = ControlFrame(self.container, [(1,1,1)])
+        frame = ControlFrame(self.container, image_home.coords)
         frame.tkraise()
 
 class ImageInitializer():
-    def __init__(self, img_path):
-
+    def __init__(self, img_path, manual=False):
         # PCB Image
         self.img_path = img_path
-        # Processing and saving the img of the home position
-        self.save_processed_home_img()
+        if not manual:
+            # Processing and saving the img in home position first time
+            self.save_processed_home_img()
         img_processed_home_path = pi_camera.get_last_img_dir()
         self.prep_img_home = ImagePreprocessing(img_processed_home_path)
         # getting 9 zoomed imgs from the photo taken in home
@@ -201,32 +207,26 @@ class ImageInitializer():
         self.coords = self.pin_holes.coords_processed
 
     def save_processed_home_img(self):
-        prep_img_home = ImagePreprocessing(self.img_path)
-        # Getting the last img taken by the raspberry
-        orig_img_gui = prep_img_home.img_array
-        # preprocessing
-        img_gui = prep_img_home.crop_rotate(orig_img_gui, (700,1660,550,1540), -2.75)
-        img_gui = prep_img_home.crop_rotate(img_gui, None, 180)
-        img_gui = cv2.resize(img_gui, (640, 640), interpolation= cv2.INTER_LINEAR)
+        img_home_gui = ImagePreprocessing(self.img_path).crop_resize_home()
         # Binarizing
-        _, img_gui = cv2.threshold(img_gui, 215, 255, cv2.THRESH_BINARY)
-        img_gui = cv2.bitwise_not(img_gui)
-        # # _, img_gui = cv2.threshold(img_gui, 215, 255, cv2.THRESH_BINARY)
-        img_gui = img_gui.astype(np.uint8)
+        _, img_home_gui = cv2.threshold(img_home_gui, 215, 255, cv2.THRESH_BINARY)
+        img_home_gui = cv2.bitwise_not(img_home_gui)
+        # # _, img_home_gui = cv2.threshold(img_home_gui, 215, 255, cv2.THRESH_BINARY)
+        img_home_gui = img_home_gui.astype(np.uint8)
         # Saving in a new path for the GUI to display easier
         img_gui_path = pi_camera.get_new_path()
-        cv2.imwrite(img_gui_path, img_gui)
+        cv2.imwrite(img_gui_path, img_home_gui)
 
 class ImageUtilsFrame(ttk.Frame):
     def __init__(self, container, coords):
         super().__init__(container)
         self.container = container
 
-        #self.img_path = pi_camera.get_last_img_dir()
+        self.img_path = pi_camera.get_last_img_dir()
         # PCB Image
         # binarized image of the pcb that takes the camera
-        # self.img_array = cv2.imread(self.img_path, 0)
-        self.img_array = cv2.imread("gui_v2/img_212.jpg", 0)
+        self.img_array = cv2.imread(self.img_path, 0)
+        #self.img_array = cv2.imread("gui_v2/img_212.jpg", 0)
         self.img_array = cv2.merge([self.img_array, self.img_array, self.img_array])
         self.coords = coords
         # pin-holes identifiers
@@ -265,6 +265,11 @@ class ControlFrame(ImageUtilsFrame):
     def create_widgets(self):
 
         # button
+        self.del_button = ttk.Button(self.container, text='Binarizar manualmente', style='Accent.TButton')
+        self.del_button.place(x = 720, y = 100)
+        self.del_button.configure(command=self.show_bin_frame)
+
+        # button
         self.move_button = ttk.Button(self.container, text='Añadir o Mover barreno', style='Accent.TButton')
         self.move_button.place(x = 700, y = 200)
         self.move_button.configure(command=self.press_move_add)
@@ -273,11 +278,11 @@ class ControlFrame(ImageUtilsFrame):
         self.del_button = ttk.Button(self.container, text='Eliminar barreno', style='Accent.TButton')
         self.del_button.place(x = 724, y = 250)
         self.del_button.configure(command=self.press_delete)
-
+        
         # button
         self.start_button = ttk.Button(self.container, text='Iniciar barrenado', style='Accent.TButton')
         self.start_button.place(x = 723, y = 400)
-        self.start_button.configure(command=self.start_drilling)
+        self.start_button.configure(command=self.do_drilling_sequence)
 
     def clear_frame(self):
         for widget in self.container.winfo_children():
@@ -293,7 +298,12 @@ class ControlFrame(ImageUtilsFrame):
         frame = DeletePCBHole(self.container, self.coords)
         frame.tkraise()
 
-    def start_drilling(self):
+    def show_bin_frame(self):
+        self.clear_frame()
+        frame = BinarizingFrame(self.container)
+        frame.tkraise()
+
+    def do_drilling_sequence(self):
         motor_controller.move_motor(1, True, "driller")
         for coord in self.coords:
             motor_controller.move_motor(1, True, "driller")
@@ -302,7 +312,21 @@ class ControlFrame(ImageUtilsFrame):
             motor_controller.move_x_y(x_pos, y_pos)
             motor_controller.drill()
             time.sleep(0.05)
+        # stop driller
         motor_controller.move_motor(1, False, "driller")
+        time.sleep(0.5)
+        # move Y to user
+        motor_controller.move_y_to_user()
+        time.sleep(0.5)
+        # table up
+        motor_controller.move_motor(300, False, "table")
+        time.sleep(0.5)
+        # return pistons to original position
+        motor_controller.move_motor(1000, True, "pistons")
+        time.sleep(0.5)
+        #table down
+        motor_controller.move_motor(300, True, "table")
+
 
 class AddMovePCBHole(ImageUtilsFrame):
     def __init__(self, container, coords):
@@ -447,6 +471,78 @@ class DeletePCBHole(ImageUtilsFrame):
         for widget in self.container.winfo_children():
             widget.destroy()
         frame = ControlFrame(self.container, self.coords)
+        frame.tkraise()
+
+class BinarizingFrame(ttk.Frame):
+    def __init__(self, container):
+        super().__init__(container)
+        self.container = container
+        pi_camera.take_photo()
+        self.img_path = pi_camera.get_last_img_dir()
+        self.img_array = ImagePreprocessing(self.img_path).crop_resize_home()
+        self.gray_img = self.img_array.copy()
+        self.create_widgets()
+
+    def render_img(self, img_array):
+        self.render = ImageTk.PhotoImage(Image.fromarray(img_array))
+        self.img_label = ttk.Label(self.container, image=self.render, cursor="cross")
+        self.img_label.place(x = 0, y = 0)
+
+    def create_widgets(self):
+
+        self.instructions = tk.Text(self.master, height=5, width=25, font=('Times New Roman', 13))
+        text='Entre mas definidos se \nvean los barrenos, hay más \nprobabilidades que la \nred neuronal los detecte'
+        self.instructions.insert("e", text)
+        self.instructions.place(x = 660, y = 10)
+
+        self.instructions2 = tk.Text(self.master, height=1, width=25, font=('Times New Roman', 12))
+        text2 = "Umbral inferior para binarizar"
+        self.instructions2.insert("e", text2)
+        self.instructions2.place(x = 660, y = 150)
+
+        self.slider1 = ttk.Scale(self.container, from_=127, to=255, orient="horizontal", style="Horizontal.Tick.TScale", length=150)
+        self.slider1.bind("<ButtonRelease-1>", self.binarize)
+        self.slider1.place(x=700, y=175)
+
+        self.instructions3 = tk.Text(self.master, height=1, width=25, font=('Times New Roman', 12))
+        text3 = "Hacer más definidos a los barrenos:"
+        self.instructions3.insert("e", text3)
+        self.instructions3.place(x = 660, y = 225)
+
+        self.slider3 = tk.Scale(self.container, from_=1, to=5, orient="horizontal")
+        self.slider3.bind("<ButtonRelease-1>", self.erode)
+        self.slider3.place(x=700, y=250)
+
+        # button
+        self.continue_button = ttk.Button(self.container, text='Volver a detectar barrenos')
+        self.continue_button.place(x = 700, y = 300)
+        self.continue_button.configure(command=self.display_control_panel)
+
+    def binarize(self, event):
+        threshold_low = self.slider1.get()
+        _, self.gray_img = cv2.threshold(self.img_array, threshold_low , 255, cv2.THRESH_BINARY)
+        self.render_img(self.gray_img)
+
+    def erode(self, event):
+        k = self.slider3.get()
+        kernel = np.ones((k,k), np.uint8)
+        new_image = cv2.erode(self.gray_img, kernel, iterations = 1)
+        self.render_img(new_image)
+
+    def save_manual_img(self):
+        self.gray_img = cv2.bitwise_not(self.gray_img)
+        self.gray_img = self.gray_img.astype(np.uint8)
+        # Saving in a new path for the GUI to display easier
+        img_gui_path = pi_camera.get_new_path()
+        cv2.imwrite(img_gui_path, self.gray_img)
+
+    def display_control_panel(self):
+        self.save_manual_img()
+        img_home_path = pi_camera.get_last_img_dir()
+        image_home = ImageInitializer(img_home_path, manual=True)
+        for widget in self.container.winfo_children():
+            widget.destroy()
+        frame = ControlFrame(self.container, image_home.coords)
         frame.tkraise()
 
 class ProcessPinHolesCenters():

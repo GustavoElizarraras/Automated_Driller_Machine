@@ -87,6 +87,9 @@ class MotorController(PinsSetup):
                 if  self.motors["z"]["position"] > 1100:
                     break
 
+                if  self.motors["pistons"]["position"] < 10:
+                    break
+
                 while not GPIO.input(11):
                     # door
                     self.move_motor(1, False, "driller")
