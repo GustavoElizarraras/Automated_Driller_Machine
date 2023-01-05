@@ -87,9 +87,6 @@ class MotorController(PinsSetup):
                 if  self.motors["z"]["position"] > 1100:
                     break
 
-                if  self.motors["pistons"]["position"] < 10:
-                    break
-
                 while not GPIO.input(11):
                     # door
                     self.move_motor(1, False, "driller")
@@ -174,7 +171,9 @@ class MotorController(PinsSetup):
             x = px_x / 640
             y = px_y / 640
             pos_x = int(1661.590361+6292.048193*x+(132.5-0.1315*px_x-0.7548*px_y+9.017e-5*(px_x**2)+0.001072*px_x*px_y+0.00139*(px_y**2)-6.27e-7*(px_x**3)-7.266e-7*(px_x**2)*px_y-1.025e-6*px_x*(px_y**2)-9.297e-7*(px_y**3)))
+            pos_x -= 20
             pos_y = int(8249.387309-5825.820569*y+(182.9-0.4563*px_x-0.3153*px_y+0.0002233*(px_x**2)+0.0008337*px_x*px_y-3.802e-5*(px_y**2)-1.106e-7*(px_x**3)+5.377e-8*(px_x**2)*px_y-4.826e-7*(px_y**2)*px_x-5.642e-8*(px_y**3)))
+            pos_y -= 85
             return pos_x, pos_y
 
     def get_pulses_and_direction(self, motor, destination):
