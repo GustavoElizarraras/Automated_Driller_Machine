@@ -278,7 +278,7 @@ class ControlFrame(ImageUtilsFrame):
         self.del_button = ttk.Button(self.container, text='Eliminar barreno', style='Accent.TButton')
         self.del_button.place(x = 724, y = 250)
         self.del_button.configure(command=self.press_delete)
-        
+
         # button
         self.start_button = ttk.Button(self.container, text='Iniciar barrenado', style='Accent.TButton')
         self.start_button.place(x = 723, y = 400)
@@ -322,7 +322,7 @@ class ControlFrame(ImageUtilsFrame):
         motor_controller.move_motor(300, False, "table")
         time.sleep(0.5)
         # return pistons to original position
-        motor_controller.move_motor(1000, True, "pistons")
+        motor_controller.move_motor(60, True, "pistons")
         time.sleep(0.5)
         #table down
         motor_controller.move_motor(300, True, "table")

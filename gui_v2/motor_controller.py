@@ -174,6 +174,13 @@ class MotorController(PinsSetup):
             pos_x -= 20
             pos_y = int(8249.387309-5825.820569*y+(182.9-0.4563*px_x-0.3153*px_y+0.0002233*(px_x**2)+0.0008337*px_x*px_y-3.802e-5*(px_y**2)-1.106e-7*(px_x**3)+5.377e-8*(px_x**2)*px_y-4.826e-7*(px_y**2)*px_x-5.642e-8*(px_y**3)))
             pos_y -= 85
+            if (207 > px_y > 75) and (x > 200):
+                pos_x -= 15
+                pos_y += 10
+            if (300 > px_x > 100) and (550 > px_y > 415):
+                pos_y += 15
+            if (460 > px_x > 310) and (480 > px_y > 420):
+                y += 10
             return pos_x, pos_y
 
     def get_pulses_and_direction(self, motor, destination):
