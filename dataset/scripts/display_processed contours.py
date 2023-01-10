@@ -11,20 +11,23 @@ fuente=cv2.FONT_HERSHEY_COMPLEX
 
 gimp_path = os.getcwd() + "/dataset/edited_wtypos"
 
-with open("dataset/original_locations.csv", "r") as file:
+with open("dataset/processed_locations/train_good.csv", "r") as file:
     reader = csv.reader(file)
+    next(reader)
     for row in reader:
-        img =  os.getcwd() + "/dataset/edited_wtypos/" + row[0]
+
+        img =  os.getcwd() + "/dataset/all_good_images/" + row[0]
+
         pcb = cv2.imread(img)
         #centers = []
         for i in range(1, len(row), 4):
             x1, y1 = int(row[i]), int(row[i+1])
             x2, y2 = int(row[i+2]), int(row[i+3])
             half_x = (x2-x1) // 2
-            half_y = (y1-y2) // 2
+            half_y = (y2-y1) // 2
             #centers.append(((x2-x1)/2, (y2-y1)/2))
 
-            cv2.circle(pcb, (x1 + half_x, y1 - half_y), int((y1-y2)/2), (0, 255, 0), 2)
+            cv2.circle(pcb, (x1 + half_x, y1 + half_y), int((y2-y1)/2), (0, 255, 0), 2)
 
         cv2.imshow(img, pcb)
         cv2.waitKey(0)

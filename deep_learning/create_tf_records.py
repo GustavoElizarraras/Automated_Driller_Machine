@@ -11,6 +11,9 @@ from object_detection.dataset_tools import tf_record_creation_util
 Usage:
 python create_tf_records.py --csv_input=dataset/test.csv  --output_path=deep_learning/data/test.record
 python create_tf_records.py --csv_input=dataset/train.csv  --output_path=deep_learning/data/train.record
+
+/home/elizarraras/.pyenv/versions/3.8.12/envs/tt/bin/python /home/elizarraras/Documents/Automated_Driller_Machine/deep_learning/create_tf_records.py --csv_input=dataset/processed_locations/test_good.csv --output_path=deep_learning/data2/test.record
+/home/elizarraras/.pyenv/versions/3.8.12/envs/tt/bin/python /home/elizarraras/Documents/Automated_Driller_Machine/deep_learning/create_tf_records.py --csv_input=dataset/processed_locations/train_good.csv --output_path=deep_learning/tfrecords_train/train.record
 """
 
 flags = absl.flags
@@ -18,17 +21,9 @@ flags.DEFINE_string('csv_input', '', 'Path to the CSV input')
 flags.DEFINE_string('output_path', '', 'Path to output TFRecord')
 FLAGS = flags.FLAGS
 
-def correct_number_type(num):
-    if "-" in num:
-        return 0
-    if "." in num:
-        if "." == num[-2]:
-            num = num[:-2]
-    return int(num)
-
 def create_tf_example(image_row):
     filename = image_row[0] # Filename of the image. Empty if image is not from file
-    filename_path = "dataset/hand_picked/" + filename
+    filename_path = "dataset/all_good_images/" + filename
     filename = filename.encode('utf8')
     with tf.io.gfile.GFile(filename_path, "rb") as fid:
         encoded_jpg = fid.read()
@@ -43,8 +38,8 @@ def create_tf_example(image_row):
     ymaxs = [] # List of normalized bottom y coordinates in bounding box
                 # (1 per box)
 
-    
-    positions = [correct_number_type(s) for s in image_row[1:] if s != ""]
+
+    positions = [int(s) for s in image_row[1:] if s != ""]
 
     for i in range(0, len(positions), 4):
         xmins.append(positions[i] / width)
